@@ -59,7 +59,18 @@
   .btn-amber{background:var(--amber); color:#20180a;}
   .btn-amber:hover{background:var(--amber-dark); color:#fff;}
 
-  .table-card{background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); overflow:auto; max-height:70vh;}
+  .table-card{background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); overflow:auto; max-height:70vh; cursor:grab;}
+  .table-card.dragging{cursor:grabbing; user-select:none;}
+  .table-card::-webkit-scrollbar{height:14px; width:14px;}
+  .table-card::-webkit-scrollbar-track{background:var(--gray-bg); border-radius:20px;}
+  .table-card::-webkit-scrollbar-thumb{background:var(--amber); border-radius:20px; border:3px solid var(--gray-bg);}
+  .table-card::-webkit-scrollbar-thumb:hover{background:var(--amber-dark);}
+  .table-card{scrollbar-width:auto; scrollbar-color:var(--amber) var(--gray-bg);}
+  .scroll-hint{display:flex; align-items:center; gap:6px; justify-content:center; color:var(--ink-soft); font-size:11.5px; margin-top:8px;}
+
+  .chips-row{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px;}
+  .chip{background:#fff; border:1px solid var(--line); color:var(--ink-soft); padding:7px 14px; border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer;}
+  .chip.active{background:var(--ink); color:#fff; border-color:var(--ink);}
   table{border-collapse:collapse; width:100%; min-width:1560px;}
   thead th{position:sticky; top:0; background:var(--ink); color:#fff; text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; padding:10px 9px; z-index:2; white-space:nowrap;}
   tbody td{padding:7px 9px; border-bottom:1px solid var(--line); vertical-align:middle; font-size:12.5px;}
@@ -210,15 +221,6 @@
   <div class="toolbar">
     <div class="grow"><select id="filterDia"></select></div>
     <div class="grow"><select id="filterEncarregado"><option value="">Todos os encarregados</option></select></div>
-    <div class="grow">
-      <select id="filterStatus">
-        <option value="">Todos os status</option>
-        <option value="pending">Somente pendentes</option>
-        <option value="filled">Somente preenchidos</option>
-        <option value="altered">Com alteração posterior</option>
-        <option value="unconfirmed">Não confirmados</option>
-      </select>
-    </div>
     <div class="grow"><input type="search" id="searchBox" placeholder="Buscar por nome ou matrícula..."></div>
     <button class="btn-outline" id="btnCodes" style="display:none;">Códigos ⚙</button>
     <button class="btn-outline" id="btnAccounts" style="display:none;">Acessos ⚙</button>
@@ -226,6 +228,14 @@
     <button class="btn-outline" id="btnPrint">Imprimir</button>
     <button class="btn-outline" id="btnExport">Exportar CSV</button>
     <button class="btn-amber" id="btnImport" style="display:none;">Importar da MATRIZ</button>
+  </div>
+
+  <div class="chips-row no-print" id="statusChips">
+    <button class="chip" data-status="pending">Pendentes</button>
+    <button class="chip" data-status="filled">Justificadas</button>
+    <button class="chip" data-status="altered">Alteradas</button>
+    <button class="chip" data-status="unconfirmed">Não confirmadas</button>
+    <button class="chip" data-status="rejected">Recusadas</button>
   </div>
 
   <div class="table-card">
@@ -244,6 +254,7 @@
       <span class="empty-msg">Clique em "Importar da MATRIZ" para enviar o arquivo e começar.</span>
     </div>
   </div>
+  <div class="scroll-hint no-print">↔ arraste a tabela pros lados pra ver mais colunas</div>
 
   <div class="footer-note">Os dados ficam salvos no Supabase e são os mesmos para todos que acessarem este link.</div>
 </div>
@@ -320,6 +331,32 @@
         <input type="password" id="loginSenha" placeholder="Sua senha">
       </div>
       <button class="btn-primary" id="btnEntrar" style="width:100%;">Entrar</button>
+      <button class="toggle-manual" id="btnEsqueciSenha" style="width:100%; text-align:center; margin-top:12px;">Esqueci minha senha</button>
+    </div>
+    <div class="login-step" id="paneEsqueci">
+      <p style="color:var(--ink-soft);">Digite seu e-mail e enviaremos um link pra você criar uma senha nova.</p>
+      <div class="login-field">
+        <label>E-mail</label>
+        <input type="email" id="resetEmail" placeholder="seu@email.com">
+      </div>
+      <button class="btn-primary" id="btnEnviarReset" style="width:100%;">Enviar link</button>
+      <button class="toggle-manual" id="btnVoltarEntrar" style="width:100%; text-align:center; margin-top:12px;">Voltar</button>
+    </div>
+    <div class="login-step" id="paneResetEnviado">
+      <p style="color:var(--ink);">Enviamos um link pro seu e-mail. Abra sua caixa de entrada, clique no link e volte aqui pra definir a nova senha.</p>
+      <button class="btn-outline" id="btnVoltarEntrar2" style="width:100%;">Voltar</button>
+    </div>
+    <div class="login-step" id="paneNovaSenha">
+      <p style="color:var(--ink);">Defina sua nova senha.</p>
+      <div class="login-field">
+        <label>Nova senha</label>
+        <input type="password" id="novaSenha1" placeholder="Nova senha (mín. 6 caracteres)">
+      </div>
+      <div class="login-field">
+        <label>Repetir nova senha</label>
+        <input type="password" id="novaSenha2" placeholder="Digite de novo">
+      </div>
+      <button class="btn-primary" id="btnSalvarNovaSenha" style="width:100%;">Salvar nova senha</button>
     </div>
     <div class="login-step" id="paneCriar">
       <div class="login-field">
@@ -569,7 +606,6 @@ function render(){
   populateEncarregadoFilter();
   const fDia = document.getElementById('filterDia').value;
   const fEnc = document.getElementById('filterEncarregado').value;
-  const fStat = document.getElementById('filterStatus').value;
   const q = document.getElementById('searchBox').value.trim().toLowerCase();
 
   const scopeList = registros.filter(r=>{
@@ -579,13 +615,20 @@ function render(){
   });
   const countersScope = scopeList.filter(r=>!r.arquivado);
 
+  function matchesStatus(r){
+    if(activeStatusFilters.size === 0) return true;
+    if(activeStatusFilters.has('pending') && !r.justificativa && !r.rejeicao_motivo) return true;
+    if(activeStatusFilters.has('filled') && r.justificativa) return true;
+    if(activeStatusFilters.has('altered') && r.alteracao_codigo) return true;
+    if(activeStatusFilters.has('unconfirmed') && r.justificativa && !r.confirmado_por) return true;
+    if(activeStatusFilters.has('rejected') && !r.justificativa && r.rejeicao_motivo) return true;
+    return false;
+  }
+
   let list = scopeList.filter(r=>{
     if(archiveView) return !!r.arquivado;
     if(r.arquivado) return false;
-    if(fStat === 'pending' && r.justificativa) return false;
-    if(fStat === 'filled' && !r.justificativa) return false;
-    if(fStat === 'altered' && !r.alteracao_codigo) return false;
-    if(fStat === 'unconfirmed' && r.confirmado_por) return false;
+    if(!matchesStatus(r)) return false;
     if(q && !((r.nome||'').toLowerCase().includes(q) || (r.matricula||'').toLowerCase().includes(q))) return false;
     return true;
   });
@@ -680,6 +723,12 @@ function renderEncCell(encTd, r){
   encTd.innerHTML = '';
   const nameSpan = document.createElement('div');
   nameSpan.textContent = r.encarregado;
+  encTd.appendChild(nameSpan);
+
+  const isStaff = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
+  const isOwn = normalize(r.encarregado) === normalize(meuPerfil.nome);
+  if(!isStaff && !isOwn) return; // encarregado só encaminha os próprios funcionários
+
   const btn = document.createElement('button');
   btn.className = 'alt-btn';
   btn.style.marginTop = '3px';
@@ -711,7 +760,6 @@ function renderEncCell(encTd, r){
     form.appendChild(sel); form.appendChild(actions);
     encTd.appendChild(form);
   });
-  encTd.appendChild(nameSpan);
   encTd.appendChild(btn);
 }
 
@@ -824,7 +872,15 @@ document.getElementById('tbody').addEventListener('click', async (e)=>{
 });
 document.getElementById('filterDia').addEventListener('change', render);
 document.getElementById('filterEncarregado').addEventListener('change', render);
-document.getElementById('filterStatus').addEventListener('change', render);
+const activeStatusFilters = new Set();
+document.querySelectorAll('#statusChips .chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    const st = chip.getAttribute('data-status');
+    if(activeStatusFilters.has(st)){ activeStatusFilters.delete(st); chip.classList.remove('active'); }
+    else { activeStatusFilters.add(st); chip.classList.add('active'); }
+    render();
+  });
+});
 document.getElementById('searchBox').addEventListener('input', render);
 
 function openModal(id){ document.getElementById(id).classList.add('show'); }
@@ -989,7 +1045,7 @@ document.getElementById('btnAddAccount').addEventListener('click', async ()=>{
 function showLoginError(msg){ const el=document.getElementById('loginError'); el.textContent=msg; el.classList.add('show'); }
 function hideLoginError(){ document.getElementById('loginError').classList.remove('show'); }
 function showLoginStep(id){
-  ['paneEntrar','paneCriar','stepConfirmEmail'].forEach(s=>document.getElementById(s).classList.remove('active'));
+  ['paneEntrar','paneCriar','stepConfirmEmail','paneEsqueci','paneResetEnviado','paneNovaSenha'].forEach(s=>document.getElementById(s).classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
 
@@ -1033,6 +1089,36 @@ document.getElementById('btnBackAfterSignup').addEventListener('click', ()=>{
   document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
   document.querySelector('.login-tab[data-tab="entrar"]').classList.add('active');
   showLoginStep('paneEntrar');
+});
+
+// ---- Esqueci minha senha ----
+document.getElementById('btnEsqueciSenha').addEventListener('click', ()=>{
+  hideLoginError();
+  document.getElementById('resetEmail').value = document.getElementById('loginEmail').value;
+  showLoginStep('paneEsqueci');
+});
+document.getElementById('btnVoltarEntrar').addEventListener('click', ()=>showLoginStep('paneEntrar'));
+document.getElementById('btnVoltarEntrar2').addEventListener('click', ()=>showLoginStep('paneEntrar'));
+document.getElementById('btnEnviarReset').addEventListener('click', async ()=>{
+  const email = document.getElementById('resetEmail').value.trim().toLowerCase();
+  if(!email){ showLoginError('Digite seu e-mail.'); return; }
+  hideLoginError();
+  const {error} = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+  if(error){ showLoginError('Erro ao enviar: '+error.message); return; }
+  showLoginStep('paneResetEnviado');
+});
+document.getElementById('btnSalvarNovaSenha').addEventListener('click', async ()=>{
+  const s1 = document.getElementById('novaSenha1').value;
+  const s2 = document.getElementById('novaSenha2').value;
+  if(!s1 || !s2){ showLoginError('Preencha as duas senhas.'); return; }
+  if(s1.length < 6){ showLoginError('A senha precisa ter pelo menos 6 caracteres.'); return; }
+  if(s1 !== s2){ showLoginError('As senhas não são iguais.'); return; }
+  hideLoginError();
+  const {error} = await sb.auth.updateUser({ password: s1 });
+  if(error){ showLoginError('Erro ao salvar: '+error.message); return; }
+  toast('Senha atualizada!');
+  const {data:{session}} = await sb.auth.getSession();
+  await handleSession(session);
 });
 
 document.getElementById('btnLogout').addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
@@ -1114,11 +1200,41 @@ async function handleSession(session){
   await enterApp();
 }
 
-sb.auth.onAuthStateChange((_event, session)=>{ handleSession(session); });
+sb.auth.onAuthStateChange((event, session)=>{
+  if(event === 'PASSWORD_RECOVERY'){
+    hideAllGates();
+    document.getElementById('loginOverlay').style.display = 'flex';
+    showLoginStep('paneNovaSenha');
+    return;
+  }
+  handleSession(session);
+});
 (async function boot(){
   const {data:{session}} = await sb.auth.getSession();
   await handleSession(session);
 })();
+
+// ============ Arrastar a tabela com o mouse ============
+(function setupDragScroll(){
+  const el = document.querySelector('.table-card');
+  let isDown = false, startX, scrollLeft;
+  el.addEventListener('mousedown', (e)=>{
+    if(e.target.closest('select, input, button, textarea')) return;
+    isDown = true;
+    el.classList.add('dragging');
+    startX = e.pageX - el.offsetLeft;
+    scrollLeft = el.scrollLeft;
+  });
+  window.addEventListener('mouseup', ()=>{ isDown = false; el.classList.remove('dragging'); });
+  el.addEventListener('mouseleave', ()=>{ isDown = false; el.classList.remove('dragging'); });
+  el.addEventListener('mousemove', (e)=>{
+    if(!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    el.scrollLeft = scrollLeft - (x - startX) * 1.2;
+  });
+})();
+
 </script>
 </body>
 </html>
