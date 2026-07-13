@@ -188,6 +188,7 @@
         <option value="filled">Somente preenchidos</option>
         <option value="altered">Com alteração posterior</option>
         <option value="unconfirmed">Não confirmados</option>
+        <option value="archived" id="optArchived" style="display:none;">Arquivados (ajustado no ponto)</option>
       </select>
     </div>
     <div class="grow"><input type="search" id="searchBox" placeholder="Buscar por nome ou matrícula..."></div>
@@ -204,7 +205,7 @@
         <tr>
           <th>Encarregado</th><th>Mat</th><th>Colaborador</th><th>Data</th><th>Dia</th>
           <th>E1</th><th>S1</th><th>E2</th><th>S2</th><th>Observação</th>
-          <th>Justificativa</th><th>Alteração</th><th>Confirmação</th><th class="no-print"></th>
+          <th>Justificativa</th><th>Alteração</th><th>Confirmação</th><th class="no-print">Ponto ajustado</th><th class="no-print"></th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -514,7 +515,6 @@ function populateDiaFilter(){
 
 function populateEncarregadoFilter(){
   const sel = document.getElementById('filterEncarregado');
-  if(meuPerfil.papel === 'encarregado') return; // travado
   const current = sel.value;
   const names = [...new Set(registros.map(r=>r.encarregado).filter(Boolean))].sort();
   sel.innerHTML = '<option value="">Todos os encarregados</option>' + names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
@@ -534,8 +534,11 @@ function render(){
     if(fEnc && r.encarregado !== fEnc) return false;
     return true;
   });
+  const countersScope = scopeList.filter(r=>!r.arquivado);
 
   let list = scopeList.filter(r=>{
+    if(fStat === 'archived') return !!r.arquivado;
+    if(r.arquivado) return false;
     if(fStat === 'pending' && r.justificativa) return false;
     if(fStat === 'filled' && !r.justificativa) return false;
     if(fStat === 'altered' && !r.alteracao_codigo) return false;
@@ -576,6 +579,7 @@ function render(){
         <td class="just-cell"></td>
         <td class="alt-cell"></td>
         <td class="confirm-cell"></td>
+        <td class="no-print arch-cell"></td>
         <td class="no-print">${meuPerfil.papel!=='encarregado' ? `<button class="del-btn" data-del="${r.id}" title="Remover linha">✕</button>` : ''}</td>
       `;
       const justTd = tr.querySelector('.just-cell');
@@ -592,10 +596,11 @@ function render(){
 
       renderAltCell(tr.querySelector('.alt-cell'), r);
       renderConfirmCell(tr.querySelector('.confirm-cell'), r);
+      renderArchiveCell(tr.querySelector('.arch-cell'), r);
       tbody.appendChild(tr);
     }
   }
-  updateCounters(scopeList);
+  updateCounters(countersScope);
 }
 
 function renderAltCell(altTd, r){
@@ -661,6 +666,37 @@ function renderConfirmCell(confTd, r){
       if(ok){ Object.assign(r, patch); render(); }
     });
     confTd.appendChild(btn);
+  }
+}
+function renderArchiveCell(archTd, r){
+  archTd.innerHTML = '';
+  const isStaff = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
+  if(!isStaff) return; // encarregado não vê essa ação
+
+  if(r.arquivado){
+    const btn = document.createElement('button');
+    btn.className = 'confirm-btn done';
+    btn.innerHTML = '✓ Arquivado';
+    btn.title = 'Arquivado por '+(r.arquivado_por||'')+' em '+fmt(r.arquivado_em)+' — clique pra desarquivar';
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('Desarquivar este registro? Ele volta a aparecer pros encarregados.')) return;
+      const patch = {arquivado:false, arquivado_em:null, arquivado_por:null};
+      const ok = await updateRegistro(r.id, patch);
+      if(ok){ Object.assign(r, patch); render(); }
+    });
+    archTd.appendChild(btn);
+  } else {
+    const btn = document.createElement('button');
+    btn.className = 'confirm-btn';
+    btn.title = 'Confirmar que o ajuste já foi feito no relógio de ponto';
+    btn.innerHTML = '✓';
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('Confirmar que esse registro já foi ajustado no ponto? Ele será arquivado e os encarregados deixam de ter acesso a ele.')) return;
+      const patch = {arquivado:true, arquivado_em: now(), arquivado_por: meuPerfil.nome};
+      const ok = await updateRegistro(r.id, patch);
+      if(ok){ Object.assign(r, patch); render(); }
+    });
+    archTd.appendChild(btn);
   }
 }
 function updateCounters(scope){
@@ -855,15 +891,9 @@ function applyPermissions(){
   document.getElementById('btnImport').style.display = isStaff ? 'inline-block' : 'none';
   document.getElementById('btnCodes').style.display = isStaff ? 'inline-block' : 'none';
   document.getElementById('btnAccounts').style.display = meuPerfil.papel === 'admin' ? 'inline-block' : 'none';
+  document.getElementById('optArchived').style.display = isStaff ? 'block' : 'none';
 
-  const sel = document.getElementById('filterEncarregado');
-  if(meuPerfil.papel === 'encarregado'){
-    sel.innerHTML = `<option value="${escapeHtml(meuPerfil.nome)}">${escapeHtml(meuPerfil.nome)}</option>`;
-    sel.value = meuPerfil.nome;
-    sel.disabled = true;
-  } else {
-    sel.disabled = false;
-  }
+  document.getElementById('filterEncarregado').disabled = false;
 }
 
 async function enterApp(){
