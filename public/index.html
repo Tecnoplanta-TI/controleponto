@@ -67,6 +67,7 @@
   tbody tr.resolved{background:var(--green-bg);}
   tbody tr.resolved:nth-child(even){background:#dff3ea;}
   tbody tr.altered{background:var(--amber-bg) !important;}
+  tbody tr.rejected{background:var(--red-bg) !important;}
   tbody tr:hover{background:#F0F4FF;}
   .mono{font-family:'Roboto Mono',monospace; font-size:12px; color:var(--ink-soft);}
   .obs{max-width:190px; color:var(--ink-soft); font-size:12px;}
@@ -119,6 +120,10 @@
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
   .footer-note{text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16px;}
 
+  .tabs-row{display:flex; gap:8px; margin:16px 0 0;}
+  .tab-btn{background:#fff; border:1px solid var(--line); color:var(--ink-soft); padding:9px 16px; border-radius:9px 9px 0 0; font-weight:700; font-size:13px; cursor:pointer; border-bottom:none; position:relative; top:1px;}
+  .tab-btn.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+
   .login-overlay{position:fixed; inset:0; background:var(--ink); display:flex; align-items:center; justify-content:center; z-index:200; padding:20px;}
   .login-card{background:#fff; border-radius:16px; padding:32px 30px; max-width:400px; width:100%; box-shadow:0 10px 40px rgba(0,0,0,.3);}
   .login-card h2{font-family:'Space Grotesk',sans-serif; margin:0 0 4px; font-size:19px;}
@@ -150,6 +155,25 @@
   .blocked-card h2{font-family:'Space Grotesk',sans-serif; margin:0 0 8px;}
   .blocked-card p{color:var(--ink-soft); font-size:13.5px; line-height:1.6;}
 
+  .resumo-overlay{position:fixed; inset:0; background:var(--bg); z-index:300; overflow-y:auto; display:none;}
+  .resumo-overlay.show{display:block;}
+  .resumo-header{background:var(--ink); color:#fff; padding:20px; position:sticky; top:0; z-index:2;}
+  .resumo-header h2{font-family:'Space Grotesk',sans-serif; margin:0 0 2px; font-size:19px;}
+  .resumo-header p{margin:0; color:#B9C2CE; font-size:13px;}
+  .resumo-actions{display:flex; gap:8px; padding:14px 16px; background:var(--bg); position:sticky; top:76px; z-index:2; border-bottom:1px solid var(--line);}
+  .resumo-actions button{flex:1;}
+  .resumo-body{padding:16px; max-width:600px; margin:0 auto;}
+  .resumo-card{background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:14px; box-shadow:var(--shadow);}
+  .resumo-card-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .resumo-card-head b{font-size:16px; font-family:'Space Grotesk',sans-serif;}
+  .resumo-badge{background:var(--red); color:#fff; font-weight:700; font-size:13px; padding:3px 11px; border-radius:20px;}
+  .resumo-item{display:flex; justify-content:space-between; padding:7px 0; border-top:1px solid var(--line); font-size:13.5px;}
+  .resumo-item:first-of-type{border-top:none;}
+  .resumo-item .rn{font-weight:600;}
+  .resumo-item .rd{color:var(--ink-soft); font-family:'Roboto Mono',monospace; font-size:12px;}
+  .resumo-empty{text-align:center; color:var(--ink-soft); padding:40px 20px;}
+  @media print{ .resumo-overlay{position:static;} }
+
   @media print{
     .toolbar, header.top, .footer-note, .no-print{display:none !important;}
     .table-card{max-height:none; overflow:visible; box-shadow:none; border:none;}
@@ -178,6 +202,11 @@
     </div>
   </header>
 
+  <div class="tabs-row no-print" id="archiveTabs" style="display:none;">
+    <button class="tab-btn active" id="tabAtivos">Ativos</button>
+    <button class="tab-btn" id="tabArquivados">🗄 Arquivados</button>
+  </div>
+
   <div class="toolbar">
     <div class="grow"><select id="filterDia"></select></div>
     <div class="grow"><select id="filterEncarregado"><option value="">Todos os encarregados</option></select></div>
@@ -188,12 +217,12 @@
         <option value="filled">Somente preenchidos</option>
         <option value="altered">Com alteração posterior</option>
         <option value="unconfirmed">Não confirmados</option>
-        <option value="archived" id="optArchived" style="display:none;">Arquivados (ajustado no ponto)</option>
       </select>
     </div>
     <div class="grow"><input type="search" id="searchBox" placeholder="Buscar por nome ou matrícula..."></div>
     <button class="btn-outline" id="btnCodes" style="display:none;">Códigos ⚙</button>
     <button class="btn-outline" id="btnAccounts" style="display:none;">Acessos ⚙</button>
+    <button class="btn-outline" id="btnResumo" style="display:none;">📋 Resumo p/ WhatsApp</button>
     <button class="btn-outline" id="btnPrint">Imprimir</button>
     <button class="btn-outline" id="btnExport">Exportar CSV</button>
     <button class="btn-amber" id="btnImport" style="display:none;">Importar da MATRIZ</button>
@@ -329,6 +358,18 @@
     <p>Seu e-mail ainda não foi cadastrado no sistema. Peça pro RH liberar seu acesso na aba de Acessos.</p>
     <button class="btn-primary" id="btnBlockedLogout" style="margin-top:16px;">Sair</button>
   </div>
+</div>
+
+<div class="resumo-overlay" id="resumoOverlay">
+  <div class="resumo-header">
+    <h2>Pendências de ponto</h2>
+    <p id="resumoSubtitle"></p>
+  </div>
+  <div class="resumo-actions no-print">
+    <button class="btn-outline" id="btnResumoFechar">✕ Fechar</button>
+    <button class="btn-primary" id="btnResumoCopiar">Copiar texto</button>
+  </div>
+  <div class="resumo-body" id="resumoBody"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -521,6 +562,8 @@ function populateEncarregadoFilter(){
   if(names.includes(current)) sel.value = current;
 }
 
+let archiveView = false;
+
 function render(){
   populateDiaFilter();
   populateEncarregadoFilter();
@@ -537,7 +580,7 @@ function render(){
   const countersScope = scopeList.filter(r=>!r.arquivado);
 
   let list = scopeList.filter(r=>{
-    if(fStat === 'archived') return !!r.arquivado;
+    if(archiveView) return !!r.arquivado;
     if(r.arquivado) return false;
     if(fStat === 'pending' && r.justificativa) return false;
     if(fStat === 'filled' && !r.justificativa) return false;
@@ -564,9 +607,9 @@ function render(){
     emptyState.style.display = 'none';
     for(const r of list){
       const tr = document.createElement('tr');
-      tr.className = r.alteracao_codigo ? 'altered' : (r.justificativa ? 'resolved' : '');
+      tr.className = r.alteracao_codigo ? 'altered' : (r.justificativa ? 'resolved' : (r.rejeicao_motivo ? 'rejected' : ''));
       tr.innerHTML = `
-        <td>${escapeHtml(r.encarregado)}</td>
+        <td class="enc-cell"></td>
         <td class="mono">${escapeHtml(r.matricula)}</td>
         <td>${escapeHtml(r.nome)}</td>
         <td class="mono">${escapeHtml(r.data)}</td>
@@ -582,17 +625,43 @@ function render(){
         <td class="no-print arch-cell"></td>
         <td class="no-print">${meuPerfil.papel!=='encarregado' ? `<button class="del-btn" data-del="${r.id}" title="Remover linha">✕</button>` : ''}</td>
       `;
+      renderEncCell(tr.querySelector('.enc-cell'), r);
       const justTd = tr.querySelector('.just-cell');
       const sel = document.createElement('select');
       sel.className = 'just-select ' + (r.justificativa ? 'filled' : 'pending');
       sel.innerHTML = codeOptionsHtml(r.justificativa);
       sel.addEventListener('change', async (e)=>{
         const val = e.target.value;
-        const ok = await updateRegistro(r.id, {justificativa: val, just_atualizado_em: val ? now() : null});
-        if(ok){ r.justificativa = val; r.just_atualizado_em = val ? now() : null; render(); }
+        const patch = {justificativa: val, just_atualizado_em: val ? now() : null, rejeicao_motivo: null, rejeitado_por: null, rejeitado_em: null};
+        const ok = await updateRegistro(r.id, patch);
+        if(ok){ Object.assign(r, patch); render(); }
       });
       justTd.appendChild(sel);
       if(r.just_atualizado_em){ const ts=document.createElement('span'); ts.className='ts'; ts.textContent=fmt(r.just_atualizado_em); justTd.appendChild(ts); }
+
+      const isStaffRow = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
+      if(isStaffRow && r.justificativa && !archiveView){
+        const recBtn = document.createElement('button');
+        recBtn.className = 'alt-btn';
+        recBtn.style.marginTop = '4px';
+        recBtn.textContent = 'Recusar';
+        recBtn.title = 'Devolver pro encarregado como pendente, com motivo';
+        recBtn.addEventListener('click', async ()=>{
+          const motivo = prompt('Motivo da recusa (o encarregado vai ver isso):');
+          if(!motivo || !motivo.trim()) return;
+          const patch = {justificativa: null, just_atualizado_em: null, rejeicao_motivo: motivo.trim(), rejeitado_por: meuPerfil.nome, rejeitado_em: now()};
+          const ok = await updateRegistro(r.id, patch);
+          if(ok){ Object.assign(r, patch); render(); }
+        });
+        justTd.appendChild(document.createElement('br'));
+        justTd.appendChild(recBtn);
+      }
+      if(!r.justificativa && r.rejeicao_motivo){
+        const note = document.createElement('div');
+        note.style.cssText = 'color:var(--red); font-size:11px; margin-top:4px; max-width:170px; line-height:1.4;';
+        note.innerHTML = `⚠ Recusado por ${escapeHtml(r.rejeitado_por||'RH')}: ${escapeHtml(r.rejeicao_motivo)}`;
+        justTd.appendChild(note);
+      }
 
       renderAltCell(tr.querySelector('.alt-cell'), r);
       renderConfirmCell(tr.querySelector('.confirm-cell'), r);
@@ -601,6 +670,49 @@ function render(){
     }
   }
   updateCounters(countersScope);
+}
+
+function getEncarregadoNames(){
+  return [...new Set(registros.map(r=>r.encarregado).filter(Boolean))].sort();
+}
+
+function renderEncCell(encTd, r){
+  encTd.innerHTML = '';
+  const nameSpan = document.createElement('div');
+  nameSpan.textContent = r.encarregado;
+  const btn = document.createElement('button');
+  btn.className = 'alt-btn';
+  btn.style.marginTop = '3px';
+  btn.textContent = '↪ Encaminhar';
+  btn.title = 'Encaminhar este lançamento pra outro encarregado';
+  btn.addEventListener('click', ()=>{
+    encTd.innerHTML = '';
+    const form = document.createElement('div'); form.className = 'alt-form';
+    const sel = document.createElement('select');
+    sel.innerHTML = '<option value="">— escolher encarregado —</option>' +
+      getEncarregadoNames().map(n=>`<option value="${escapeHtml(n)}" ${n===r.encarregado?'selected':''}>${escapeHtml(n)}</option>`).join('') +
+      '<option value="__outro__">+ Outro nome...</option>';
+    const actions = document.createElement('div'); actions.className='alt-form-actions';
+    const save = document.createElement('button'); save.className='btn-primary'; save.textContent='Salvar';
+    save.addEventListener('click', async ()=>{
+      let novoNome = sel.value;
+      if(novoNome === '__outro__'){
+        novoNome = prompt('Nome do encarregado:', r.encarregado);
+        if(!novoNome) return;
+        novoNome = novoNome.trim();
+      }
+      if(!novoNome){ toast('Escolha um encarregado.'); return; }
+      const ok = await updateRegistro(r.id, {encarregado: novoNome});
+      if(ok){ r.encarregado = novoNome; render(); }
+    });
+    const cancel = document.createElement('button'); cancel.className='btn-outline'; cancel.textContent='Cancelar';
+    cancel.addEventListener('click', ()=>render());
+    actions.appendChild(save); actions.appendChild(cancel);
+    form.appendChild(sel); form.appendChild(actions);
+    encTd.appendChild(form);
+  });
+  encTd.appendChild(nameSpan);
+  encTd.appendChild(btn);
 }
 
 function renderAltCell(altTd, r){
@@ -721,6 +833,58 @@ document.querySelectorAll('[data-close]').forEach(el=> el.addEventListener('clic
 document.querySelectorAll('.overlay').forEach(ov=> ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.classList.remove('show'); }));
 document.getElementById('btnImport').addEventListener('click', ()=>openModal('importOverlay'));
 document.getElementById('btnPrint').addEventListener('click', ()=>window.print());
+
+// ============ Resumo p/ WhatsApp ============
+function buildResumoData(){
+  const fDia = document.getElementById('filterDia').value;
+  const dia = (fDia && fDia !== '__todos__') ? fDia : hojeBR();
+  const pendentes = registros.filter(r => !r.arquivado && !r.justificativa && (fDia === '__todos__' ? true : r.data === dia));
+  const porEncarregado = {};
+  for(const r of pendentes){
+    const enc = r.encarregado || '(sem encarregado)';
+    if(!porEncarregado[enc]) porEncarregado[enc] = [];
+    porEncarregado[enc].push(r);
+  }
+  const grupos = Object.entries(porEncarregado).sort((a,b)=> b[1].length - a[1].length);
+  return {dia: fDia === '__todos__' ? 'todos os dias' : dia, grupos, total: pendentes.length};
+}
+
+function openResumo(){
+  const {dia, grupos, total} = buildResumoData();
+  document.getElementById('resumoSubtitle').textContent = `${dia} — ${total} pendente(s) no total`;
+  const body = document.getElementById('resumoBody');
+  if(grupos.length === 0){
+    body.innerHTML = '<div class="resumo-empty"><b>Nenhuma pendência 🎉</b></div>';
+  } else {
+    body.innerHTML = grupos.map(([enc, items])=>`
+      <div class="resumo-card">
+        <div class="resumo-card-head"><b>${escapeHtml(enc)}</b><span class="resumo-badge">${items.length}</span></div>
+        ${items.map(r=>`<div class="resumo-item"><span class="rn">${escapeHtml(r.nome)}</span><span class="rd">${escapeHtml(r.matricula)} · ${escapeHtml(r.data)}</span></div>`).join('')}
+      </div>
+    `).join('');
+  }
+  document.getElementById('resumoOverlay').classList.add('show');
+}
+document.getElementById('btnResumo').addEventListener('click', openResumo);
+document.getElementById('btnResumoFechar').addEventListener('click', ()=> document.getElementById('resumoOverlay').classList.remove('show'));
+document.getElementById('btnResumoCopiar').addEventListener('click', async ()=>{
+  const {dia, grupos, total} = buildResumoData();
+  let txt = `📋 *Pendências de ponto — ${dia}*\n${total} pendente(s) no total\n`;
+  if(grupos.length === 0){
+    txt += '\nNenhuma pendência 🎉';
+  } else {
+    for(const [enc, items] of grupos){
+      txt += `\n👤 *${enc}* (${items.length})\n`;
+      for(const r of items){ txt += `• ${r.nome} — ${r.matricula} — ${r.data}\n`; }
+    }
+  }
+  try{
+    await navigator.clipboard.writeText(txt);
+    toast('Texto copiado! Já pode colar no WhatsApp.');
+  }catch(e){
+    toast('Não foi possível copiar automaticamente. Selecione o texto manualmente.');
+  }
+});
 
 document.getElementById('btnExport').addEventListener('click', ()=>{
   const header = ['Encarregado','Mat','Colaborador','Data','Dia','E1','S1','E2','S2','Observação','Justificativa','Atualizado (Justificativa)','Alteração','Nota Alteração','Atualizado (Alteração)','Confirmado Por','Confirmado Em'];
@@ -891,10 +1055,23 @@ function applyPermissions(){
   document.getElementById('btnImport').style.display = isStaff ? 'inline-block' : 'none';
   document.getElementById('btnCodes').style.display = isStaff ? 'inline-block' : 'none';
   document.getElementById('btnAccounts').style.display = meuPerfil.papel === 'admin' ? 'inline-block' : 'none';
-  document.getElementById('optArchived').style.display = isStaff ? 'block' : 'none';
+  document.getElementById('archiveTabs').style.display = isStaff ? 'flex' : 'none';
+  document.getElementById('btnResumo').style.display = isStaff ? 'inline-block' : 'none';
 
   document.getElementById('filterEncarregado').disabled = false;
 }
+document.getElementById('tabAtivos').addEventListener('click', ()=>{
+  archiveView = false;
+  document.getElementById('tabAtivos').classList.add('active');
+  document.getElementById('tabArquivados').classList.remove('active');
+  render();
+});
+document.getElementById('tabArquivados').addEventListener('click', ()=>{
+  archiveView = true;
+  document.getElementById('tabArquivados').classList.add('active');
+  document.getElementById('tabAtivos').classList.remove('active');
+  render();
+});
 
 async function enterApp(){
   hideAllGates();
