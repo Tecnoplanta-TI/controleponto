@@ -415,7 +415,9 @@
 // ============ Configuração Supabase ============
 const SUPABASE_URL = "https://qbhgsfytzyehgdmpofaq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_THL5drPDhF48q2tkxF0i5w_231xB9Ap";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true }
+});
 
 const DEFAULT_CODES = [
   {c:"FJ", l:"Falta Justificada"}, {c:"FI", l:"Falta Injustificada (Falta Total)"},
@@ -1210,6 +1212,16 @@ sb.auth.onAuthStateChange((event, session)=>{
   handleSession(session);
 });
 (async function boot(){
+  // Se o Supabase redirecionou com um erro (link expirado, inválido, etc.), mostra pra pessoa
+  const hash = new URLSearchParams(window.location.hash.replace('#',''));
+  const search = new URLSearchParams(window.location.search);
+  const authError = hash.get('error_description') || search.get('error_description');
+  if(authError){
+    document.getElementById('loginOverlay').style.display = 'flex';
+    showLoginStep('paneEntrar');
+    showLoginError('Link inválido ou expirado: '+decodeURIComponent(authError).replace(/\+/g,' ')+'. Peça um novo link em "Esqueci minha senha".');
+    history.replaceState(null, '', window.location.pathname);
+  }
   const {data:{session}} = await sb.auth.getSession();
   await handleSession(session);
 })();
