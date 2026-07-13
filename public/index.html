@@ -124,6 +124,9 @@
   .login-card h2{font-family:'Space Grotesk',sans-serif; margin:0 0 4px; font-size:19px;}
   .login-card p{color:var(--ink-soft); font-size:13px; margin:0 0 18px;}
   .login-field{margin-bottom:12px;}
+  .login-tabs{display:flex; gap:6px; margin-bottom:16px; background:var(--gray-bg); border-radius:8px; padding:4px;}
+  .login-tab{flex:1; text-align:center; padding:8px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; color:var(--ink-soft);}
+  .login-tab.active{background:#fff; color:var(--ink); box-shadow:var(--shadow);}
   .login-field label{display:block; font-size:12px; color:var(--ink-soft); margin-bottom:5px; font-weight:600;}
   .login-error{color:var(--red); font-size:12.5px; margin-top:8px; display:none;}
   .login-error.show{display:block;}
@@ -176,6 +179,7 @@
   </header>
 
   <div class="toolbar">
+    <div class="grow"><select id="filterDia"></select></div>
     <div class="grow"><select id="filterEncarregado"><option value="">Todos os encarregados</option></select></div>
     <div class="grow">
       <select id="filterStatus">
@@ -207,7 +211,7 @@
     </table>
     <div class="empty" id="emptyState" style="display:none;">
       <b>Nenhum registro ainda</b>
-      Clique em "Importar da MATRIZ" para enviar o arquivo e começar.
+      <span class="empty-msg">Clique em "Importar da MATRIZ" para enviar o arquivo e começar.</span>
     </div>
   </div>
 
@@ -271,19 +275,50 @@
 <div class="login-overlay" id="loginOverlay">
   <div class="login-card" id="loginCard">
     <h2>Controle de Ocorrências de Ponto</h2>
-    <p>Entre com seu e-mail cadastrado</p>
-    <div class="login-step active" id="stepEmail">
+    <p id="loginSubtitle">Entre com seu e-mail e senha</p>
+    <div class="login-tabs">
+      <div class="login-tab active" data-tab="entrar">Entrar</div>
+      <div class="login-tab" data-tab="criar">Criar conta</div>
+    </div>
+    <div class="login-step active" id="paneEntrar">
       <div class="login-field">
         <label>E-mail</label>
         <input type="email" id="loginEmail" placeholder="seu@email.com">
       </div>
-      <button class="btn-primary" id="btnSendLink" style="width:100%;">Enviar link de acesso</button>
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="loginSenha" placeholder="Sua senha">
+      </div>
+      <button class="btn-primary" id="btnEntrar" style="width:100%;">Entrar</button>
     </div>
-    <div class="login-step" id="stepSent">
-      <p style="color:var(--ink);">Enviamos um link de acesso pro seu e-mail. Abra sua caixa de entrada e clique no link pra entrar.</p>
-      <button class="btn-outline" id="btnBackEmail" style="width:100%;">Usar outro e-mail</button>
+    <div class="login-step" id="paneCriar">
+      <div class="login-field">
+        <label>Nome completo</label>
+        <input type="text" id="signupNome" placeholder="Seu nome">
+      </div>
+      <div class="login-field">
+        <label>E-mail</label>
+        <input type="email" id="signupEmail" placeholder="seu@email.com">
+      </div>
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="signupSenha" placeholder="Crie uma senha (mín. 6 caracteres)">
+      </div>
+      <button class="btn-primary" id="btnCriarConta" style="width:100%;">Criar conta</button>
+    </div>
+    <div class="login-step" id="stepConfirmEmail">
+      <p style="color:var(--ink);">Enviamos um e-mail de confirmação. Abra sua caixa de entrada, confirme, e volte aqui pra entrar com sua senha.</p>
+      <button class="btn-outline" id="btnBackAfterSignup" style="width:100%;">Voltar</button>
     </div>
     <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div class="login-overlay" id="pendingOverlay" style="display:none;">
+  <div class="blocked-card">
+    <h2>Conta criada — aguardando aprovação</h2>
+    <p>Seu e-mail não estava na lista de acessos liberados pelo RH. Sua conta foi criada, mas alguém com acesso de <b>Admin</b> precisa entrar em "Acessos" e definir seu papel (Encarregado, RH ou Admin) antes que você possa usar o sistema.</p>
+    <button class="btn-primary" id="btnPendingLogout" style="margin-top:16px;">Sair</button>
   </div>
 </div>
 
@@ -450,6 +485,33 @@ document.getElementById('btnDoImport').addEventListener('click', async ()=>{
 });
 
 // ============ Render ============
+let diaFilterInitialized = false;
+function parseDataBR(d){
+  if(!d) return 0;
+  const parts = d.split('/');
+  if(parts.length !== 3) return 0;
+  const [dd,mm,yyyy] = parts.map(Number);
+  return new Date(yyyy, (mm||1)-1, dd||1).getTime();
+}
+function hojeBR(){ return new Date().toLocaleDateString('pt-BR'); }
+
+function populateDiaFilter(){
+  const sel = document.getElementById('filterDia');
+  const today = hojeBR();
+  const set = new Set(registros.map(r=>r.data).filter(Boolean));
+  set.add(today);
+  const dates = [...set].sort((a,b)=> parseDataBR(b) - parseDataBR(a));
+  const current = sel.value;
+  sel.innerHTML = '<option value="__todos__">Todos os dias</option>' +
+    dates.map(d=> `<option value="${escapeHtml(d)}">${d===today?'Hoje — ':''}${escapeHtml(d)}</option>`).join('');
+  if(!diaFilterInitialized){
+    sel.value = today;
+    diaFilterInitialized = true;
+  } else if([...sel.options].some(o=>o.value===current)){
+    sel.value = current;
+  }
+}
+
 function populateEncarregadoFilter(){
   const sel = document.getElementById('filterEncarregado');
   if(meuPerfil.papel === 'encarregado') return; // travado
@@ -460,13 +522,20 @@ function populateEncarregadoFilter(){
 }
 
 function render(){
+  populateDiaFilter();
   populateEncarregadoFilter();
+  const fDia = document.getElementById('filterDia').value;
   const fEnc = document.getElementById('filterEncarregado').value;
   const fStat = document.getElementById('filterStatus').value;
   const q = document.getElementById('searchBox').value.trim().toLowerCase();
 
-  let list = registros.filter(r=>{
+  const scopeList = registros.filter(r=>{
+    if(fDia && fDia !== '__todos__' && r.data !== fDia) return false;
     if(fEnc && r.encarregado !== fEnc) return false;
+    return true;
+  });
+
+  let list = scopeList.filter(r=>{
     if(fStat === 'pending' && r.justificativa) return false;
     if(fStat === 'filled' && !r.justificativa) return false;
     if(fStat === 'altered' && !r.alteracao_codigo) return false;
@@ -479,7 +548,15 @@ function render(){
   const emptyState = document.getElementById('emptyState');
   tbody.innerHTML = '';
 
-  if(registros.length === 0){ emptyState.style.display = 'block'; }
+  if(registros.length === 0){
+    emptyState.style.display = 'block';
+    emptyState.querySelector('b').textContent = 'Nenhum registro ainda';
+    emptyState.querySelector('.empty-msg').textContent = 'Clique em "Importar da MATRIZ" para enviar o arquivo e começar.';
+  } else if(list.length === 0){
+    emptyState.style.display = 'block';
+    emptyState.querySelector('b').textContent = 'Nada por aqui';
+    emptyState.querySelector('.empty-msg').textContent = 'Não há registros pra esse dia/filtro. Tente "Todos os dias" ou outro filtro.';
+  }
   else {
     emptyState.style.display = 'none';
     for(const r of list){
@@ -518,7 +595,7 @@ function render(){
       tbody.appendChild(tr);
     }
   }
-  updateCounters();
+  updateCounters(scopeList);
 }
 
 function renderAltCell(altTd, r){
@@ -586,9 +663,9 @@ function renderConfirmCell(confTd, r){
     confTd.appendChild(btn);
   }
 }
-function updateCounters(){
-  document.getElementById('pendingCount').textContent = registros.filter(r=>!r.justificativa).length;
-  document.getElementById('unconfirmedCount').textContent = registros.filter(r=>r.justificativa && !r.confirmado_por).length;
+function updateCounters(scope){
+  document.getElementById('pendingCount').textContent = scope.filter(r=>!r.justificativa).length;
+  document.getElementById('unconfirmedCount').textContent = scope.filter(r=>r.justificativa && !r.confirmado_por).length;
 }
 document.getElementById('tbody').addEventListener('click', async (e)=>{
   const btn = e.target.closest('[data-del]'); if(!btn) return;
@@ -597,6 +674,7 @@ document.getElementById('tbody').addEventListener('click', async (e)=>{
   const ok = await deleteRegistro(id);
   if(ok){ registros = registros.filter(r=>r.id !== id); render(); }
 });
+document.getElementById('filterDia').addEventListener('change', render);
 document.getElementById('filterEncarregado').addEventListener('change', render);
 document.getElementById('filterStatus').addEventListener('change', render);
 document.getElementById('searchBox').addEventListener('input', render);
@@ -651,11 +729,13 @@ async function renderAccounts(){
   const wrap = document.getElementById('accountsList');
   if(error){ wrap.innerHTML = '<p style="color:var(--red); font-size:12.5px;">Erro ao carregar: '+escapeHtml(error.message)+'</p>'; return; }
   if(!data || data.length===0){ wrap.innerHTML = '<p style="color:var(--ink-soft); font-size:12.5px;">Nenhum acesso cadastrado ainda.</p>'; return; }
-  wrap.innerHTML = data.map(a=>`
-    <div class="account-row" data-email="${escapeHtml(a.email)}">
-      <span class="name">${escapeHtml(a.nome)}</span>
+  const sorted = [...data].sort((a,b)=> (a.papel==='pendente'?0:1) - (b.papel==='pendente'?0:1));
+  wrap.innerHTML = sorted.map(a=>`
+    <div class="account-row" data-email="${escapeHtml(a.email)}" style="${a.papel==='pendente' ? 'border:1px solid var(--amber); background:var(--amber-bg);' : ''}">
+      <span class="name">${escapeHtml(a.nome)}${a.papel==='pendente' ? ' <span style="color:var(--amber-dark); font-weight:700;">· pendente</span>' : ''}</span>
       <span class="email">${escapeHtml(a.email)}</span>
       <select data-papel="${escapeHtml(a.email)}">
+        ${a.papel==='pendente' ? '<option value="pendente" selected disabled>Escolher papel...</option>' : ''}
         <option value="encarregado" ${a.papel==='encarregado'?'selected':''}>Encarregado</option>
         <option value="rh" ${a.papel==='rh'?'selected':''}>RH</option>
         <option value="admin" ${a.papel==='admin'?'selected':''}>Admin</option>
@@ -695,22 +775,61 @@ document.getElementById('btnAddAccount').addEventListener('click', async ()=>{
 // ============ Autenticação ============
 function showLoginError(msg){ const el=document.getElementById('loginError'); el.textContent=msg; el.classList.add('show'); }
 function hideLoginError(){ document.getElementById('loginError').classList.remove('show'); }
+function showLoginStep(id){
+  ['paneEntrar','paneCriar','stepConfirmEmail'].forEach(s=>document.getElementById(s).classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
 
-document.getElementById('btnSendLink').addEventListener('click', async ()=>{
+document.querySelectorAll('.login-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    hideLoginError();
+    showLoginStep(tab.dataset.tab === 'entrar' ? 'paneEntrar' : 'paneCriar');
+  });
+});
+
+document.getElementById('btnEntrar').addEventListener('click', async ()=>{
   const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-  if(!email){ showLoginError('Digite seu e-mail.'); return; }
+  const senha = document.getElementById('loginSenha').value;
+  if(!email || !senha){ showLoginError('Preencha e-mail e senha.'); return; }
   hideLoginError();
-  const {error} = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
-  if(error){ showLoginError('Erro ao enviar: '+error.message); return; }
-  document.getElementById('stepEmail').classList.remove('active');
-  document.getElementById('stepSent').classList.add('active');
+  const {error} = await sb.auth.signInWithPassword({ email, password: senha });
+  if(error){ showLoginError('E-mail ou senha incorretos.'); return; }
+  // onAuthStateChange cuida do resto
 });
-document.getElementById('btnBackEmail').addEventListener('click', ()=>{
-  document.getElementById('stepSent').classList.remove('active');
-  document.getElementById('stepEmail').classList.add('active');
+
+document.getElementById('btnCriarConta').addEventListener('click', async ()=>{
+  const nome = document.getElementById('signupNome').value.trim();
+  const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+  const senha = document.getElementById('signupSenha').value;
+  if(!nome || !email || !senha){ showLoginError('Preencha todos os campos.'); return; }
+  if(senha.length < 6){ showLoginError('A senha precisa ter pelo menos 6 caracteres.'); return; }
+  hideLoginError();
+  const {data, error} = await sb.auth.signUp({ email, password: senha, options: { data: { nome } } });
+  if(error){ showLoginError('Erro ao criar conta: '+error.message); return; }
+  if(data.session){
+    // confirmação de e-mail desativada: já entra direto
+    await handleSession(data.session);
+  } else {
+    showLoginStep('stepConfirmEmail');
+  }
 });
+document.getElementById('btnBackAfterSignup').addEventListener('click', ()=>{
+  document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.login-tab[data-tab="entrar"]').classList.add('active');
+  showLoginStep('paneEntrar');
+});
+
 document.getElementById('btnLogout').addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
 document.getElementById('btnBlockedLogout').addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
+document.getElementById('btnPendingLogout').addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
+
+function hideAllGates(){
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('blockedOverlay').style.display = 'none';
+  document.getElementById('pendingOverlay').style.display = 'none';
+}
 
 function applyPermissions(){
   const badge = document.getElementById('userBadge');
@@ -734,8 +853,7 @@ function applyPermissions(){
 }
 
 async function enterApp(){
-  document.getElementById('loginOverlay').style.display = 'none';
-  document.getElementById('blockedOverlay').style.display = 'none';
+  hideAllGates();
   applyPermissions();
   await loadCodigos();
   await loadRegistros();
@@ -744,16 +862,33 @@ async function enterApp(){
 
 async function handleSession(session){
   if(!session){
+    hideAllGates();
     document.getElementById('loginOverlay').style.display = 'flex';
     return;
   }
   const email = session.user.email.toLowerCase();
-  const {data, error} = await sb.from('perfis').select('*').eq('email', email).maybeSingle();
+  let {data, error} = await sb.from('perfis').select('*').eq('email', email).maybeSingle();
+
+  if(!error && !data){
+    // e-mail não cadastrado pelo admin: cria o próprio acesso como "pendente"
+    const nome = session.user.user_metadata?.nome || email.split('@')[0];
+    const insertResp = await sb.from('perfis').insert({ email, nome, papel: 'pendente' }).select().maybeSingle();
+    data = insertResp.data;
+    error = insertResp.error;
+  }
+
   if(error || !data){
-    document.getElementById('loginOverlay').style.display = 'none';
+    hideAllGates();
     document.getElementById('blockedOverlay').style.display = 'flex';
     return;
   }
+
+  if(data.papel === 'pendente'){
+    hideAllGates();
+    document.getElementById('pendingOverlay').style.display = 'flex';
+    return;
+  }
+
   meuPerfil = data;
   await enterApp();
 }
