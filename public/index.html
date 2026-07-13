@@ -293,16 +293,16 @@
     </div>
     <div class="login-step" id="paneCriar">
       <div class="login-field">
-        <label>Nome completo</label>
-        <input type="text" id="signupNome" placeholder="Seu nome">
-      </div>
-      <div class="login-field">
         <label>E-mail</label>
         <input type="email" id="signupEmail" placeholder="seu@email.com">
       </div>
       <div class="login-field">
         <label>Senha</label>
         <input type="password" id="signupSenha" placeholder="Crie uma senha (mín. 6 caracteres)">
+      </div>
+      <div class="login-field">
+        <label>Repetir senha</label>
+        <input type="password" id="signupSenha2" placeholder="Digite a senha novamente">
       </div>
       <button class="btn-primary" id="btnCriarConta" style="width:100%;">Criar conta</button>
     </div>
@@ -732,7 +732,8 @@ async function renderAccounts(){
   const sorted = [...data].sort((a,b)=> (a.papel==='pendente'?0:1) - (b.papel==='pendente'?0:1));
   wrap.innerHTML = sorted.map(a=>`
     <div class="account-row" data-email="${escapeHtml(a.email)}" style="${a.papel==='pendente' ? 'border:1px solid var(--amber); background:var(--amber-bg);' : ''}">
-      <span class="name">${escapeHtml(a.nome)}${a.papel==='pendente' ? ' <span style="color:var(--amber-dark); font-weight:700;">· pendente</span>' : ''}</span>
+      <input type="text" class="name" data-nome="${escapeHtml(a.email)}" value="${escapeHtml(a.nome)}" style="border:1px solid var(--line); border-radius:6px; padding:5px 7px;">
+      ${a.papel==='pendente' ? '<span style="color:var(--amber-dark); font-weight:700; font-size:11px;">pendente</span>' : ''}
       <span class="email">${escapeHtml(a.email)}</span>
       <select data-papel="${escapeHtml(a.email)}">
         ${a.papel==='pendente' ? '<option value="pendente" selected disabled>Escolher papel...</option>' : ''}
@@ -743,6 +744,18 @@ async function renderAccounts(){
       <button data-rmacc="${escapeHtml(a.email)}" title="Remover acesso">✕</button>
     </div>
   `).join('');
+  wrap.querySelectorAll('[data-nome]').forEach(inp=>{
+    let original = inp.value;
+    inp.addEventListener('blur', async ()=>{
+      const novoNome = inp.value.trim();
+      if(!novoNome || novoNome === original){ inp.value = original || inp.value; return; }
+      const email = inp.getAttribute('data-nome');
+      const {error} = await sb.from('perfis').update({nome: novoNome}).eq('email', email);
+      if(error){ toast('Erro: '+error.message); inp.value = original; return; }
+      original = novoNome;
+      toast('Nome atualizado.');
+    });
+  });
   wrap.querySelectorAll('[data-papel]').forEach(sel=>{
     sel.addEventListener('change', async ()=>{
       const email = sel.getAttribute('data-papel');
@@ -800,13 +813,14 @@ document.getElementById('btnEntrar').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnCriarConta').addEventListener('click', async ()=>{
-  const nome = document.getElementById('signupNome').value.trim();
   const email = document.getElementById('signupEmail').value.trim().toLowerCase();
   const senha = document.getElementById('signupSenha').value;
-  if(!nome || !email || !senha){ showLoginError('Preencha todos os campos.'); return; }
+  const senha2 = document.getElementById('signupSenha2').value;
+  if(!email || !senha || !senha2){ showLoginError('Preencha todos os campos.'); return; }
   if(senha.length < 6){ showLoginError('A senha precisa ter pelo menos 6 caracteres.'); return; }
+  if(senha !== senha2){ showLoginError('As senhas não são iguais.'); return; }
   hideLoginError();
-  const {data, error} = await sb.auth.signUp({ email, password: senha, options: { data: { nome } } });
+  const {data, error} = await sb.auth.signUp({ email, password: senha });
   if(error){ showLoginError('Erro ao criar conta: '+error.message); return; }
   if(data.session){
     // confirmação de e-mail desativada: já entra direto
