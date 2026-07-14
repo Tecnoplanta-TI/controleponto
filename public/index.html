@@ -319,6 +319,7 @@
     <button class="chip" data-status="altered">Alteradas</button>
     <button class="chip" data-status="unconfirmed">Não confirmadas</button>
     <button class="chip" data-status="rejected">Recusadas</button>
+    <button class="chip" data-status="assinadas">Assinadas</button>
     <button class="chip" data-status="conferencia">Em conferência</button>
   </div>
 
@@ -789,6 +790,7 @@ function render(){
     if(activeStatusFilter === 'altered') return !!r.alteracao_codigo;
     if(activeStatusFilter === 'unconfirmed') return r.justificativa && !r.confirmado_por;
     if(activeStatusFilter === 'rejected') return !!r.rejeicao_motivo;
+    if(activeStatusFilter === 'assinadas') return !!r.confirmado_por;
     if(activeStatusFilter === 'conferencia'){
       const codigo = codigos.find(c => c.sigla === r.justificativa);
       return !!(codigo && normLoose(codigo.descricao).includes('conferencia'));
@@ -1020,6 +1022,10 @@ function renderAltCell(altTd, r){
   if(!r.confirmado_por){
     return; // só é possível alterar depois que o lançamento foi confirmado/assinado
   }
+  const isStaffAlt = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
+  if(!isStaffAlt && !r.rejeicao_motivo){
+    return; // líder só mexe de novo se o RH/Admin tiver recusado
+  }
   if(r.alteracao_codigo){
     const chip = document.createElement('div');
     chip.className = 'alt-chip';
@@ -1046,7 +1052,7 @@ function showAltForm(altTd, r){
   const save = document.createElement('button'); save.className='btn-primary'; save.textContent='Salvar';
   save.addEventListener('click', async ()=>{
     if(!sel.value){ toast('Selecione um código.'); return; }
-    const patch = {alteracao_codigo: sel.value, alteracao_nota: note.value.trim(), alteracao_em: now()};
+    const patch = {alteracao_codigo: sel.value, alteracao_nota: note.value.trim(), alteracao_em: now(), rejeicao_motivo: null, rejeitado_por: null, rejeitado_em: null};
     const ok = await updateRegistro(r.id, patch);
     if(ok){ Object.assign(r, patch); render(); }
   });
