@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -131,7 +132,7 @@
   .add-code-row{display:flex; gap:8px; margin-top:10px;}
   .add-code-row input{flex:1;}
 
-  .dropzone{border:2px dashed var(--line); border-radius:10px; padding:28px 16px; text-align:center; background:var(--gray-bg); cursor:pointer; transition:all .15s ease; margin-top:8px;}
+  .dropzone{display:block; width:100%; box-sizing:border-box; border:2px dashed var(--line); border-radius:10px; padding:28px 16px; text-align:center; background:var(--gray-bg); cursor:pointer; transition:all .15s ease; margin-top:8px;}
   .dropzone:hover, .dropzone.drag{border-color:var(--amber); background:var(--amber-bg);}
   .dropzone b{display:block; font-size:14px; margin-bottom:4px;}
   .dropzone span{font-size:12px; color:var(--ink-soft);}
@@ -194,6 +195,8 @@
   .resumo-card-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
   .resumo-card-head b{font-size:16px; font-family:'Space Grotesk',sans-serif;}
   .resumo-badge{background:var(--red); color:#fff; font-weight:700; font-size:13px; padding:3px 11px; border-radius:20px;}
+  .resumo-img-btn{background:#fff; border:1px solid var(--line); border-radius:7px; padding:5px 8px; font-size:14px; cursor:pointer; line-height:1;}
+  .resumo-img-btn:hover{border-color:var(--brand); background:#EAF7EE;}
   .resumo-item{display:flex; justify-content:space-between; padding:7px 0; border-top:1px solid var(--line); font-size:13.5px;}
   .resumo-item:first-of-type{border-top:none;}
   .resumo-item .rn{font-weight:600;}
@@ -220,7 +223,7 @@
       <img src="/logo.png" alt="Logotipo da empresa" class="brand-logo" onerror="this.style.display='none'">
       <div>
         <h1>Controle de Ocorrências de Ponto</h1>
-        <p>Preenchimento digital das justificativas — aba MATRIZ</p>
+        <p>Preenchimento digital das justificativas — Base de Dados</p>
       </div>
     </div>
     <div class="clocks">
@@ -239,6 +242,7 @@
   </div>
 
   <div class="toolbar">
+    <div class="grow"><select id="filterUnidade" style="display:none;"></select></div>
     <div class="grow"><select id="filterDia"></select></div>
     <div class="grow"><select id="filterEncarregado"><option value="">Todos os líderes</option></select></div>
     <div class="grow"><input type="search" id="searchBox" placeholder="Buscar por nome ou matrícula..."></div>
@@ -247,7 +251,7 @@
     <button class="btn-outline" id="btnResumo" style="display:none;">📋 Resumo p/ WhatsApp</button>
     <button class="btn-outline" id="btnPrint">Imprimir</button>
     <button class="btn-outline" id="btnExport">Exportar CSV</button>
-    <button class="btn-amber" id="btnImport" style="display:none;">Importar da MATRIZ</button>
+    <button class="btn-amber" id="btnImport" style="display:none;">Importar Base de Dados</button>
   </div>
 
   <div class="chips-row no-print" id="statusChips">
@@ -273,7 +277,7 @@
     </table>
     <div class="empty" id="emptyState" style="display:none;">
       <b>Nenhum registro ainda</b>
-      <span class="empty-msg">Clique em "Importar da MATRIZ" para enviar o arquivo e começar.</span>
+      <span class="empty-msg">Clique em "Importar Base de Dados" para enviar o arquivo e começar.</span>
     </div>
   </div>
   <div class="scroll-hint no-print">↔ arraste a tabela pros lados pra ver mais colunas</div>
@@ -288,17 +292,28 @@
 <div class="overlay" id="importOverlay">
   <div class="modal">
     <button class="close-x" data-close="importOverlay">✕</button>
-    <h2>Importar da aba MATRIZ</h2>
-    <p>Selecione o arquivo .xlsx da planilha do RH. O sistema lê automaticamente a aba <b>MATRIZ</b>.</p>
+    <h2>Importar Base de Dados</h2>
+    <p>Selecione o arquivo .xlsx da planilha do RH.</p>
+    <div class="login-field">
+      <label>Unidade deste arquivo</label>
+      <select id="importUnidade">
+        <option value="">— selecione a unidade —</option>
+        <option value="UBR">UBR</option>
+        <option value="UBN">UBN</option>
+        <option value="UTB">UTB</option>
+        <option value="UES">UES</option>
+        <option value="UBA">UBA</option>
+      </select>
+    </div>
     <label class="dropzone" id="dropzone">
       <b id="dzLabel">Clique para escolher o arquivo, ou arraste aqui</b>
-      <span>.xlsx — a aba "MATRIZ" será lida automaticamente</span>
+      <span>.xlsx — a Base de Dados será lida automaticamente</span>
       <input type="file" id="fileInput" accept=".xlsx,.xls">
     </label>
     <button class="toggle-manual" id="toggleManual">Prefere colar os dados manualmente em vez de enviar o arquivo?</button>
     <div class="manual-area" id="manualArea">
       <div class="cols">Encarregados | Mat | Nome Colaborador | Data | Dia | E1 | S1 | E2 | S2 | Observação | (Justificativa) | (Alteração) | (Assinatura Líder — ignorada)</div>
-      <textarea id="importText" placeholder="Cole aqui os dados copiados da aba MATRIZ..."></textarea>
+      <textarea id="importText" placeholder="Cole aqui os dados copiados da Base de Dados..."></textarea>
       <div class="modal-actions"><button class="btn-primary" id="btnDoImport">Importar texto colado</button></div>
     </div>
   </div>
@@ -446,6 +461,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true }
 });
 
+const UNIDADES = ['UBR','UBN','UTB','UES','UBA'];
 const DEFAULT_CODES = [
   {c:"FJ", l:"Falta Justificada"}, {c:"FI", l:"Falta Injustificada (Falta Total)"},
   {c:"AB", l:"Abono"}, {c:"AR", l:"Abono de Registro"}, {c:"AM", l:"Atestado Médico"},
@@ -499,7 +515,7 @@ async function deleteRegistro(id){
 }
 
 // ============ Importação ============
-function parsePasted(text){
+function parsePasted(text, unidade){
   const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
   const rows = [];
   for(const line of lines){
@@ -507,20 +523,20 @@ function parsePasted(text){
     cells = cells.map(c=>c.trim());
     if(cells.length < 5) continue;
     if(normalize(cells[0]).includes('encarreg')) continue;
-    rows.push(buildRow(cells[0],cells[1],cells[2],cells[3],cells[4],cells[5],cells[6],cells[7],cells[8],cells[9],cells[10]));
+    rows.push(buildRow(cells[0],cells[1],cells[2],cells[3],cells[4],cells[5],cells[6],cells[7],cells[8],cells[9],cells[10],unidade));
   }
   return rows;
 }
-function buildRow(encarregado,matricula,nome,data,dia,e1,s1,e2,s2,observacao,justificativa){
+function buildRow(encarregado,matricula,nome,data,dia,e1,s1,e2,s2,observacao,justificativa,unidade){
   justificativa = (justificativa||'').trim();
   return {
     encarregado: encarregado||'', matricula: matricula||'', nome: nome||'',
     data: data||'', dia: dia||'', e1: e1||'', s1: s1||'', e2: e2||'', s2: s2||'',
-    observacao: observacao||'', justificativa,
+    observacao: observacao||'', justificativa, unidade: unidade || null,
     just_atualizado_em: justificativa ? now() : null
   };
 }
-function mapMatrizRows(data){
+function mapMatrizRows(data, unidade){
   let headerIdx = -1;
   for(let i=0;i<Math.min(data.length,10);i++){
     if(data[i] && data[i].some(c=>normalize(c).includes('encarreg'))){ headerIdx=i; break; }
@@ -541,7 +557,7 @@ function mapMatrizRows(data){
     if(!row) continue;
     const get = (k)=> (col[k]>=0 && row[col[k]]!=null) ? String(row[col[k]]).trim() : '';
     if(!get('encarregado') && !get('nome')) continue;
-    rows.push(buildRow(get('encarregado'),get('matricula'),get('nome'),get('data'),get('dia'),get('e1'),get('s1'),get('e2'),get('s2'),get('observacao'),get('justificativa')));
+    rows.push(buildRow(get('encarregado'),get('matricula'),get('nome'),get('data'),get('dia'),get('e1'),get('s1'),get('e2'),get('s2'),get('observacao'),get('justificativa'),unidade));
   }
   return rows;
 }
@@ -556,20 +572,22 @@ async function importRows(rows){
 
 async function importFile(file){
   if(!file) return;
+  const unidade = document.getElementById('importUnidade').value;
+  if(!unidade){ toast('Escolha a unidade desse arquivo antes de importar.'); return; }
   document.getElementById('dzLabel').textContent = 'Lendo arquivo...';
   try{
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, {type:'array'});
     let sheetName = wb.SheetNames.find(n => normalize(n) === 'matriz') || wb.SheetNames.find(n => normalize(n).includes('matriz'));
-    if(!sheetName){ toast('Aba "MATRIZ" não encontrada. Abas disponíveis: '+wb.SheetNames.join(', ')); return; }
+    if(!sheetName){ toast('Não encontrei a Base de Dados nesse arquivo. Abas disponíveis: '+wb.SheetNames.join(', ')); return; }
     const data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, raw:false, defval:''});
-    const rows = mapMatrizRows(data);
-    if(rows.length===0){ toast('Nenhuma linha de dados encontrada na aba MATRIZ.'); return; }
+    const rows = mapMatrizRows(data, unidade);
+    if(rows.length===0){ toast('Nenhuma linha de dados encontrada na Base de Dados.'); return; }
     const {added} = await importRows(rows);
     await loadRegistros();
     render();
     closeModal('importOverlay');
-    toast(`Importação concluída: ${added} linha(s) nova(s) (repetidas foram ignoradas).`);
+    toast(`Importação concluída: ${added} linha(s) nova(s) em ${unidade} (repetidas foram ignoradas).`);
   }catch(err){
     console.error(err);
     toast('Não foi possível ler o arquivo. Verifique se é um .xlsx válido.');
@@ -583,19 +601,36 @@ dz.addEventListener('dragleave', ()=> dz.classList.remove('drag'));
 dz.addEventListener('drop', (e)=>{ e.preventDefault(); dz.classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) importFile(f); });
 document.getElementById('toggleManual').addEventListener('click', ()=> document.getElementById('manualArea').classList.toggle('show'));
 document.getElementById('btnDoImport').addEventListener('click', async ()=>{
+  const unidade = document.getElementById('importUnidade').value;
+  if(!unidade){ toast('Escolha a unidade desse arquivo antes de importar.'); return; }
   const text = document.getElementById('importText').value;
-  const rows = parsePasted(text);
+  const rows = parsePasted(text, unidade);
   if(rows.length===0){ toast('Não foi possível identificar linhas válidas.'); return; }
   const {added} = await importRows(rows);
   await loadRegistros();
   document.getElementById('importText').value='';
   closeModal('importOverlay');
   render();
-  toast(`Importação concluída: ${added} linha(s) nova(s) (repetidas foram ignoradas).`);
+  toast(`Importação concluída: ${added} linha(s) nova(s) em ${unidade} (repetidas foram ignoradas).`);
 });
 
 // ============ Render ============
 let diaFilterInitialized = false;
+function dmyToIso(d){
+  if(!d) return '';
+  const parts = d.split('/');
+  if(parts.length !== 3) return '';
+  const [dd,mm,yyyy] = parts;
+  if(!dd||!mm||!yyyy) return '';
+  return `${yyyy.padStart(4,'0')}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+}
+function isoToDmy(iso){
+  if(!iso) return '';
+  const parts = iso.split('-');
+  if(parts.length !== 3) return '';
+  const [yyyy,mm,dd] = parts;
+  return `${dd}/${mm}/${yyyy}`;
+}
 function parseDataBR(d){
   if(!d) return 0;
   const parts = d.split('/');
@@ -637,11 +672,14 @@ function render(){
   populateEncarregadoFilter();
   const fDia = document.getElementById('filterDia').value;
   const fEnc = document.getElementById('filterEncarregado').value;
+  const fUnidade = document.getElementById('filterUnidade').value;
+  const isStaff = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
   const q = document.getElementById('searchBox').value.trim().toLowerCase();
 
   const scopeList = registros.filter(r=>{
     if(fDia && fDia !== '__todos__' && r.data !== fDia) return false;
     if(fEnc && r.encarregado !== fEnc) return false;
+    if(isStaff && fUnidade && fUnidade !== '__todas__' && r.unidade !== fUnidade) return false;
     return true;
   });
   const countersScope = scopeList.filter(r=>!r.arquivado);
@@ -675,7 +713,7 @@ function render(){
   if(registros.length === 0){
     emptyState.style.display = 'block';
     emptyState.querySelector('b').textContent = 'Nenhum registro ainda';
-    emptyState.querySelector('.empty-msg').textContent = 'Clique em "Importar da MATRIZ" para enviar o arquivo e começar.';
+    emptyState.querySelector('.empty-msg').textContent = 'Clique em "Importar Base de Dados" para enviar o arquivo e começar.';
   } else if(list.length === 0){
     emptyState.style.display = 'block';
     emptyState.querySelector('b').textContent = 'Nada por aqui';
@@ -787,24 +825,24 @@ function renderTrocaFields(justTd, r){
   const wrap = document.createElement('div');
   wrap.style.cssText = 'margin-top:5px;';
   const input = document.createElement('input');
-  input.type = 'text';
   input.style.cssText = 'font-size:11.5px; padding:5px 6px; width:100%; border:1px solid var(--line); border-radius:6px;';
 
   if(ehTrocaHorario){
-    input.placeholder = 'Novo horário (ex: 08:00)';
+    input.type = 'time';
     input.value = r.novo_horario || '';
-    input.addEventListener('blur', async ()=>{
+    input.addEventListener('change', async ()=>{
       if(input.value === (r.novo_horario||'')) return;
-      const ok = await updateRegistro(r.id, {novo_horario: input.value.trim()});
-      if(ok){ r.novo_horario = input.value.trim(); }
+      const ok = await updateRegistro(r.id, {novo_horario: input.value});
+      if(ok){ r.novo_horario = input.value; }
     });
   } else {
-    input.placeholder = 'Novo dia (ex: 15/07/2026)';
-    input.value = r.novo_dia || '';
-    input.addEventListener('blur', async ()=>{
-      if(input.value === (r.novo_dia||'')) return;
-      const ok = await updateRegistro(r.id, {novo_dia: input.value.trim()});
-      if(ok){ r.novo_dia = input.value.trim(); }
+    input.type = 'date';
+    input.value = dmyToIso(r.novo_dia);
+    input.addEventListener('change', async ()=>{
+      const brValue = isoToDmy(input.value);
+      if(brValue === (r.novo_dia||'')) return;
+      const ok = await updateRegistro(r.id, {novo_dia: brValue});
+      if(ok){ r.novo_dia = brValue; }
     });
   }
   wrap.appendChild(input);
@@ -822,6 +860,13 @@ function renderEncCell(encTd, r){
   encTd.appendChild(nameSpan);
 
   const isStaff = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
+  if(isStaff && r.unidade){
+    const tag = document.createElement('span');
+    tag.textContent = r.unidade;
+    tag.style.cssText = 'display:inline-block; font-size:10px; font-weight:700; color:var(--brand); background:#EAF7EE; border-radius:5px; padding:1px 6px; margin-top:2px;';
+    encTd.appendChild(tag);
+  }
+
   const isOwn = normalize(r.encarregado) === normalize(meuPerfil.nome);
   if(!isStaff && !isOwn) return; // encarregado só encaminha os próprios funcionários
 
@@ -966,6 +1011,7 @@ document.getElementById('tbody').addEventListener('click', async (e)=>{
   const ok = await deleteRegistro(id);
   if(ok){ registros = registros.filter(r=>r.id !== id); render(); }
 });
+document.getElementById('filterUnidade').addEventListener('change', render);
 document.getElementById('filterDia').addEventListener('change', render);
 document.getElementById('filterEncarregado').addEventListener('change', render);
 let activeStatusFilter = null;
@@ -984,7 +1030,11 @@ function openModal(id){ document.getElementById(id).classList.add('show'); }
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }
 document.querySelectorAll('[data-close]').forEach(el=> el.addEventListener('click', ()=>closeModal(el.getAttribute('data-close'))));
 document.querySelectorAll('.overlay').forEach(ov=> ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.classList.remove('show'); }));
-document.getElementById('btnImport').addEventListener('click', ()=>openModal('importOverlay'));
+document.getElementById('btnImport').addEventListener('click', ()=>{
+  const cur = document.getElementById('filterUnidade').value;
+  document.getElementById('importUnidade').value = (cur && cur !== '__todas__') ? cur : '';
+  openModal('importOverlay');
+});
 document.getElementById('btnPrint').addEventListener('click', ()=>window.print());
 
 // ============ Resumo p/ WhatsApp ============
@@ -1009,9 +1059,15 @@ function openResumo(){
   if(grupos.length === 0){
     body.innerHTML = '<div class="resumo-empty"><b>Nenhuma pendência 🎉</b></div>';
   } else {
-    body.innerHTML = grupos.map(([enc, items])=>`
-      <div class="resumo-card">
-        <div class="resumo-card-head"><b>${escapeHtml(enc)}</b><span class="resumo-badge">${items.length}</span></div>
+    body.innerHTML = grupos.map(([enc, items], idx)=>`
+      <div class="resumo-card" id="resumoCard${idx}">
+        <div class="resumo-card-head">
+          <b>${escapeHtml(enc)}</b>
+          <span style="display:flex; align-items:center; gap:8px;">
+            <span class="resumo-badge">${items.length}</span>
+            <button class="resumo-img-btn no-shot" data-card="${idx}" title="Copiar este cartão como imagem">📷</button>
+          </span>
+        </div>
         ${items.map(r=>`<div class="resumo-item"><span class="rn">${escapeHtml(r.nome)}</span><span class="rd">${escapeHtml(r.matricula)} · ${escapeHtml(r.data)}</span></div>`).join('')}
       </div>
     `).join('');
@@ -1020,6 +1076,31 @@ function openResumo(){
 }
 document.getElementById('btnResumo').addEventListener('click', openResumo);
 document.getElementById('btnResumoFechar').addEventListener('click', ()=> document.getElementById('resumoOverlay').classList.remove('show'));
+document.getElementById('resumoBody').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('.resumo-img-btn');
+  if(!btn) return;
+  const card = document.getElementById('resumoCard'+btn.getAttribute('data-card'));
+  const hideEls = card.querySelectorAll('.no-shot');
+  hideEls.forEach(el=>el.style.visibility='hidden');
+  try{
+    const canvas = await html2canvas(card, {backgroundColor:'#ffffff', scale:2});
+    hideEls.forEach(el=>el.style.visibility='');
+    canvas.toBlob(async (blob)=>{
+      try{
+        await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+        toast('Cartão copiado como imagem! Já pode colar no WhatsApp.');
+      }catch(err){
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download='pendencias.png'; a.click();
+        URL.revokeObjectURL(url);
+        toast('Não deu pra copiar direto nesse navegador — baixei a imagem pra você.');
+      }
+    });
+  }catch(err){
+    hideEls.forEach(el=>el.style.visibility='');
+    toast('Erro ao gerar a imagem.');
+  }
+});
 document.getElementById('btnResumoCopiar').addEventListener('click', async ()=>{
   const {dia, grupos, total} = buildResumoData();
   let txt = `📋 *Pendências de ponto — ${dia}*\n${total} pendente(s) no total\n`;
@@ -1094,9 +1175,21 @@ async function renderAccounts(){
         <option value="rh" ${a.papel==='rh'?'selected':''}>RH</option>
         <option value="admin" ${a.papel==='admin'?'selected':''}>Admin</option>
       </select>
+      <select data-unidade="${escapeHtml(a.email)}" title="Unidade">
+        <option value="">Sem unidade</option>
+        ${UNIDADES.map(u=>`<option value="${u}" ${a.unidade===u?'selected':''}>${u}</option>`).join('')}
+      </select>
       <button data-rmacc="${escapeHtml(a.email)}" title="Remover acesso">✕</button>
     </div>
   `).join('');
+  wrap.querySelectorAll('[data-unidade]').forEach(sel=>{
+    sel.addEventListener('change', async ()=>{
+      const email = sel.getAttribute('data-unidade');
+      const {error} = await sb.from('perfis').update({unidade: sel.value || null}).eq('email', email);
+      if(error){ toast('Erro: '+error.message); return; }
+      toast('Unidade atualizada.');
+    });
+  });
   wrap.querySelectorAll('[data-nome]').forEach(inp=>{
     let original = inp.value;
     inp.addEventListener('blur', async ()=>{
@@ -1241,6 +1334,18 @@ function applyPermissions(){
   document.getElementById('btnAccounts').style.display = meuPerfil.papel === 'admin' ? 'inline-block' : 'none';
   document.getElementById('archiveTabs').style.display = isStaff ? 'flex' : 'none';
   document.getElementById('btnResumo').style.display = isStaff ? 'inline-block' : 'none';
+
+  const unidadeSel = document.getElementById('filterUnidade');
+  if(isStaff){
+    unidadeSel.style.display = 'block';
+    if(!unidadeSel.dataset.loaded){
+      unidadeSel.innerHTML = '<option value="__todas__">Todas as unidades</option>' +
+        UNIDADES.map(u=>`<option value="${u}">${u}</option>`).join('');
+      unidadeSel.dataset.loaded = '1';
+    }
+  } else {
+    unidadeSel.style.display = 'none';
+  }
 
   document.getElementById('filterEncarregado').disabled = false;
 }
