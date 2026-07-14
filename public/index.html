@@ -1002,9 +1002,18 @@ function renderConfirmCell(confTd, r){
   } else {
     btn.className = 'confirm-btn'; btn.textContent = 'Confirmar';
     btn.addEventListener('click', async ()=>{
-      const name = prompt('Confirmar revisão como:', meuPerfil.nome || '');
-      if(!name) return;
-      const patch = {confirmado_por: name.trim(), confirmado_em: now()};
+      const codigo = codigos.find(c => c.sigla === r.justificativa);
+      const desc = codigo ? normLoose(codigo.descricao) : '';
+      if(desc.includes('troca de horario') && !r.novo_horario){
+        toast('Selecione o novo horário antes de confirmar.');
+        return;
+      }
+      if(desc.includes('troca de dia') && !r.novo_dia){
+        toast('Selecione o novo dia antes de confirmar.');
+        return;
+      }
+      if(!confirm('Ao confirmar, você assina esse documento. Deseja continuar?')) return;
+      const patch = {confirmado_por: meuPerfil.nome, confirmado_em: now()};
       const ok = await updateRegistro(r.id, patch);
       if(ok){ Object.assign(r, patch); render(); }
     });
