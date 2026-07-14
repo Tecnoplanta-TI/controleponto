@@ -1012,6 +1012,10 @@ function renderConfirmCell(confTd, r){
         toast('Selecione o novo dia antes de confirmar.');
         return;
       }
+      if(desc.includes('conferencia') && !r.conferencia_obs){
+        toast('Escreva a explicação pro RH antes de confirmar.');
+        return;
+      }
       if(!confirm('Ao confirmar, você assina esse documento. Deseja continuar?')) return;
       const patch = {confirmado_por: meuPerfil.nome, confirmado_em: now()};
       const ok = await updateRegistro(r.id, patch);
