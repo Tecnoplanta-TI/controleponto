@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Controle de Ocorrências de Ponto</title>
+<link rel="icon" type="image/png" href="/ico.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -13,14 +14,15 @@
     --ink:#1B2430; --ink-soft:#4A5568; --bg:#F0F2F5; --card:#FFFFFF; --line:#DDE2E8;
     --amber:#E8A33D; --amber-dark:#C97F17; --amber-bg:#FBF0DC;
     --green:#2F9E6E; --green-bg:#E5F6EF; --red:#D64545; --red-bg:#FCE9E9; --gray-bg:#EEF0F3;
+    --brand:#009146; --brand-dark:#00713a;
     --shadow:0 1px 2px rgba(27,36,48,.06), 0 2px 8px rgba(27,36,48,.04);
   }
   *{box-sizing:border-box;}
-  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; font-size:14px; -webkit-font-smoothing:antialiased;}
+  body{margin:0; background:#FFFFFF; color:var(--ink); font-family:'Inter',sans-serif; font-size:14px; -webkit-font-smoothing:antialiased;}
   .wrap{max-width:1500px;margin:0 auto;padding:22px 20px 60px;}
 
   header.top{
-    background:var(--ink); color:#fff; border-radius:14px; padding:22px 26px;
+    background:var(--brand); color:#fff; border-radius:14px; padding:22px 26px;
     display:flex; justify-content:space-between; align-items:center; gap:20px;
     position:relative; overflow:hidden; box-shadow:var(--shadow);
   }
@@ -29,8 +31,10 @@
     background-image: radial-gradient(circle, rgba(255,255,255,.14) 2.5px, transparent 2.6px);
     background-size: 100% 16px; background-position: 13px 8px;
   }
-  header.top h1{font-family:'Space Grotesk',sans-serif; font-size:21px; margin:0 0 4px 0; letter-spacing:.2px; padding-left:20px;}
-  header.top p{margin:0;padding-left:20px;color:#B9C2CE;font-size:13px;}
+  header.top h1{font-family:'Space Grotesk',sans-serif; font-size:21px; margin:0 0 4px 0; letter-spacing:.2px; padding-left:0;}
+  header.top p{margin:0;padding-left:0;color:#DFF3E8;font-size:13px;}
+  .header-left{display:flex; align-items:center; gap:16px; padding-left:20px; position:relative; z-index:1;}
+  .brand-logo{height:44px; width:auto; max-width:140px; object-fit:contain; background:#fff; border-radius:8px; padding:5px 8px;}
   .clocks{display:flex; gap:26px; align-items:center;}
   .clock{font-family:'Roboto Mono',monospace; text-align:right; line-height:1;}
   .clock .n{font-size:34px;font-weight:600;color:var(--amber);}
@@ -52,8 +56,8 @@
     font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px;
     padding:9px 14px; border-radius:8px; border:1px solid transparent; cursor:pointer; white-space:nowrap;
   }
-  .btn-primary{background:var(--ink); color:#fff;}
-  .btn-primary:hover{background:#2c3948;}
+  .btn-primary{background:var(--brand); color:#fff;}
+  .btn-primary:hover{background:var(--brand-dark);}
   .btn-outline{background:#fff; border-color:var(--line); color:var(--ink);}
   .btn-outline:hover{background:var(--gray-bg);}
   .btn-amber{background:var(--amber); color:#20180a;}
@@ -68,11 +72,18 @@
   .table-card{scrollbar-width:auto; scrollbar-color:var(--amber) var(--gray-bg);}
   .scroll-hint{display:flex; align-items:center; gap:6px; justify-content:center; color:var(--ink-soft); font-size:11.5px; margin-top:8px;}
 
+  .scroll-top{overflow-x:auto; overflow-y:hidden; height:16px; margin-bottom:6px; border-radius:8px;}
+  .scroll-top::-webkit-scrollbar{height:14px;}
+  .scroll-top::-webkit-scrollbar-track{background:var(--gray-bg); border-radius:20px;}
+  .scroll-top::-webkit-scrollbar-thumb{background:var(--amber); border-radius:20px; border:3px solid var(--gray-bg);}
+  .scroll-top{scrollbar-width:auto; scrollbar-color:var(--amber) var(--gray-bg);}
+  .scroll-top div{height:1px;}
+
   .chips-row{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px;}
   .chip{background:#fff; border:1px solid var(--line); color:var(--ink-soft); padding:7px 14px; border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer;}
-  .chip.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .chip.active{background:var(--brand); color:#fff; border-color:var(--brand);}
   table{border-collapse:collapse; width:100%; min-width:1560px;}
-  thead th{position:sticky; top:0; background:var(--ink); color:#fff; text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; padding:10px 9px; z-index:2; white-space:nowrap;}
+  thead th{position:sticky; top:0; background:var(--brand); color:#fff; text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; padding:10px 9px; z-index:2; white-space:nowrap;}
   tbody td{padding:7px 9px; border-bottom:1px solid var(--line); vertical-align:middle; font-size:12.5px;}
   tbody tr:nth-child(even){background:#FAFBFC;}
   tbody tr.resolved{background:var(--green-bg);}
@@ -127,17 +138,20 @@
   .manual-area{display:none; margin-top:10px;}
   .manual-area.show{display:block;}
 
-  .toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; padding:11px 18px; border-radius:8px; font-size:13px; box-shadow:var(--shadow); opacity:0; transition:all .25s ease; z-index:100; pointer-events:none;}
+  .toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--brand); color:#fff; padding:11px 18px; border-radius:8px; font-size:13px; box-shadow:var(--shadow); opacity:0; transition:all .25s ease; z-index:100; pointer-events:none;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
   .footer-note{text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16px;}
+  .brand-footer{background:var(--brand); padding:22px; display:flex; justify-content:center; align-items:center; margin-top:26px;}
+  .brand-footer img{height:38px; width:auto; max-width:160px; object-fit:contain; background:#fff; border-radius:8px; padding:5px 10px;}
 
   .tabs-row{display:flex; gap:8px; margin:16px 0 0;}
   .tab-btn{background:#fff; border:1px solid var(--line); color:var(--ink-soft); padding:9px 16px; border-radius:9px 9px 0 0; font-weight:700; font-size:13px; cursor:pointer; border-bottom:none; position:relative; top:1px;}
-  .tab-btn.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .tab-btn.active{background:var(--brand); color:#fff; border-color:var(--brand);}
 
-  .login-overlay{position:fixed; inset:0; background:var(--ink); display:flex; align-items:center; justify-content:center; z-index:200; padding:20px;}
+  .login-overlay{position:fixed; inset:0; background:var(--brand); display:flex; align-items:center; justify-content:center; z-index:200; padding:20px;}
   .login-card{background:#fff; border-radius:16px; padding:32px 30px; max-width:400px; width:100%; box-shadow:0 10px 40px rgba(0,0,0,.3);}
   .login-card h2{font-family:'Space Grotesk',sans-serif; margin:0 0 4px; font-size:19px;}
+  .login-logo{display:block; height:52px; width:auto; max-width:220px; object-fit:contain; margin:0 auto 16px;}
   .login-card p{color:var(--ink-soft); font-size:13px; margin:0 0 18px;}
   .login-field{margin-bottom:12px;}
   .login-tabs{display:flex; gap:6px; margin-bottom:16px; background:var(--gray-bg); border-radius:8px; padding:4px;}
@@ -168,7 +182,7 @@
 
   .resumo-overlay{position:fixed; inset:0; background:var(--bg); z-index:300; overflow-y:auto; display:none;}
   .resumo-overlay.show{display:block;}
-  .resumo-header{background:var(--ink); color:#fff; padding:20px; position:sticky; top:0; z-index:2;}
+  .resumo-header{background:var(--brand); color:#fff; padding:20px; position:sticky; top:0; z-index:2;}
   .resumo-header h2{font-family:'Space Grotesk',sans-serif; margin:0 0 2px; font-size:19px;}
   .resumo-header p{margin:0; color:#B9C2CE; font-size:13px;}
   .resumo-actions{display:flex; gap:8px; padding:14px 16px; background:var(--bg); position:sticky; top:76px; z-index:2; border-bottom:1px solid var(--line);}
@@ -186,12 +200,13 @@
   @media print{ .resumo-overlay{position:static;} }
 
   @media print{
-    .toolbar, header.top, .footer-note, .no-print{display:none !important;}
+    .toolbar, header.top, .footer-note, .brand-footer, .no-print{display:none !important;}
     .table-card{max-height:none; overflow:visible; box-shadow:none; border:none;}
     body{background:#fff;}
   }
   @media (max-width:720px){
     header.top{flex-direction:column; align-items:flex-start;}
+    .header-left{padding-left:0;}
   }
 </style>
 </head>
@@ -199,9 +214,12 @@
 
 <div class="wrap">
   <header class="top">
-    <div>
-      <h1>Controle de Ocorrências de Ponto</h1>
-      <p>Preenchimento digital das justificativas — aba MATRIZ</p>
+    <div class="header-left">
+      <img src="/logo.png" alt="Logotipo da empresa" class="brand-logo" onerror="this.style.display='none'">
+      <div>
+        <h1>Controle de Ocorrências de Ponto</h1>
+        <p>Preenchimento digital das justificativas — aba MATRIZ</p>
+      </div>
     </div>
     <div class="clocks">
       <div class="clock"><div class="n" id="pendingCount">0</div><div class="l">pendentes</div></div>
@@ -220,7 +238,7 @@
 
   <div class="toolbar">
     <div class="grow"><select id="filterDia"></select></div>
-    <div class="grow"><select id="filterEncarregado"><option value="">Todos os encarregados</option></select></div>
+    <div class="grow"><select id="filterEncarregado"><option value="">Todos os líderes</option></select></div>
     <div class="grow"><input type="search" id="searchBox" placeholder="Buscar por nome ou matrícula..."></div>
     <button class="btn-outline" id="btnCodes" style="display:none;">Códigos ⚙</button>
     <button class="btn-outline" id="btnAccounts" style="display:none;">Acessos ⚙</button>
@@ -238,11 +256,12 @@
     <button class="chip" data-status="rejected">Recusadas</button>
   </div>
 
+  <div class="scroll-top" id="scrollTop"><div id="scrollTopInner"></div></div>
   <div class="table-card">
     <table id="dataTable">
       <thead>
         <tr>
-          <th>Encarregado</th><th>Mat</th><th>Colaborador</th><th>Data</th><th>Dia</th>
+          <th>Líder</th><th>Mat</th><th>Colaborador</th><th>Data</th><th>Dia</th>
           <th>E1</th><th>S1</th><th>E2</th><th>S2</th><th>Observação</th>
           <th>Justificativa</th><th>Alteração</th><th>Confirmação</th><th class="no-print">Ponto ajustado</th><th class="no-print"></th>
         </tr>
@@ -258,6 +277,10 @@
 
   <div class="footer-note">Os dados ficam salvos no Supabase e são os mesmos para todos que acessarem este link.</div>
 </div>
+
+<footer class="brand-footer">
+  <img src="/pcp.png" alt="Logotipo do setor" onerror="this.style.display='none'">
+</footer>
 
 <div class="overlay" id="importOverlay">
   <div class="modal">
@@ -303,7 +326,7 @@
       <input type="email" id="newAccEmail" placeholder="E-mail" style="flex:2; min-width:180px;">
       <input type="text" id="newAccName" placeholder="Nome" style="flex:1.5; min-width:140px;">
       <select id="newAccPapel" style="max-width:150px;">
-        <option value="encarregado">Encarregado</option>
+        <option value="encarregado">Líder</option>
         <option value="rh">RH</option>
         <option value="admin">Admin</option>
       </select>
@@ -315,6 +338,7 @@
 
 <div class="login-overlay" id="loginOverlay">
   <div class="login-card" id="loginCard">
+    <img src="/logo.png" alt="Logotipo da empresa" class="login-logo" onerror="this.style.display='none'">
     <h2>Controle de Ocorrências de Ponto</h2>
     <p id="loginSubtitle">Entre com seu e-mail e senha</p>
     <div class="login-tabs">
@@ -384,7 +408,7 @@
 <div class="login-overlay" id="pendingOverlay" style="display:none;">
   <div class="blocked-card">
     <h2>Conta criada — aguardando aprovação</h2>
-    <p>Seu e-mail não estava na lista de acessos liberados pelo RH. Sua conta foi criada, mas alguém com acesso de <b>Admin</b> precisa entrar em "Acessos" e definir seu papel (Encarregado, RH ou Admin) antes que você possa usar o sistema.</p>
+    <p>Seu e-mail não estava na lista de acessos liberados pelo RH. Sua conta foi criada, mas alguém com acesso de <b>Admin</b> precisa entrar em "Acessos" e definir seu papel (Líder, RH ou Admin) antes que você possa usar o sistema.</p>
     <button class="btn-primary" id="btnPendingLogout" style="margin-top:16px;">Sair</button>
   </div>
 </div>
@@ -597,7 +621,7 @@ function populateEncarregadoFilter(){
   const sel = document.getElementById('filterEncarregado');
   const current = sel.value;
   const names = [...new Set(registros.map(r=>r.encarregado).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">Todos os encarregados</option>' + names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  sel.innerHTML = '<option value="">Todos os líderes</option>' + names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
   if(names.includes(current)) sel.value = current;
 }
 
@@ -618,13 +642,13 @@ function render(){
   const countersScope = scopeList.filter(r=>!r.arquivado);
 
   function matchesStatus(r){
-    if(activeStatusFilters.size === 0) return true;
-    if(activeStatusFilters.has('pending') && !r.justificativa && !r.rejeicao_motivo) return true;
-    if(activeStatusFilters.has('filled') && r.justificativa) return true;
-    if(activeStatusFilters.has('altered') && r.alteracao_codigo) return true;
-    if(activeStatusFilters.has('unconfirmed') && r.justificativa && !r.confirmado_por) return true;
-    if(activeStatusFilters.has('rejected') && !r.justificativa && r.rejeicao_motivo) return true;
-    return false;
+    if(!activeStatusFilter) return true;
+    if(activeStatusFilter === 'pending') return !r.justificativa && !r.rejeicao_motivo;
+    if(activeStatusFilter === 'filled') return !!r.justificativa;
+    if(activeStatusFilter === 'altered') return !!r.alteracao_codigo;
+    if(activeStatusFilter === 'unconfirmed') return r.justificativa && !r.confirmado_por;
+    if(activeStatusFilter === 'rejected') return !r.justificativa && !!r.rejeicao_motivo;
+    return true;
   }
 
   let list = scopeList.filter(r=>{
@@ -690,9 +714,9 @@ function render(){
         recBtn.className = 'alt-btn';
         recBtn.style.marginTop = '4px';
         recBtn.textContent = 'Recusar';
-        recBtn.title = 'Devolver pro encarregado como pendente, com motivo';
+        recBtn.title = 'Devolver pro líder como pendente, com motivo';
         recBtn.addEventListener('click', async ()=>{
-          const motivo = prompt('Motivo da recusa (o encarregado vai ver isso):');
+          const motivo = prompt('Motivo da recusa (o líder vai ver isso):');
           if(!motivo || !motivo.trim()) return;
           const patch = {justificativa: null, just_atualizado_em: null, rejeicao_motivo: motivo.trim(), rejeitado_por: meuPerfil.nome, rejeitado_em: now()};
           const ok = await updateRegistro(r.id, patch);
@@ -735,12 +759,12 @@ function renderEncCell(encTd, r){
   btn.className = 'alt-btn';
   btn.style.marginTop = '3px';
   btn.textContent = '↪ Encaminhar';
-  btn.title = 'Encaminhar este lançamento pra outro encarregado';
+  btn.title = 'Encaminhar este lançamento pra outro líder';
   btn.addEventListener('click', ()=>{
     encTd.innerHTML = '';
     const form = document.createElement('div'); form.className = 'alt-form';
     const sel = document.createElement('select');
-    sel.innerHTML = '<option value="">— escolher encarregado —</option>' +
+    sel.innerHTML = '<option value="">— escolher líder —</option>' +
       getEncarregadoNames().map(n=>`<option value="${escapeHtml(n)}" ${n===r.encarregado?'selected':''}>${escapeHtml(n)}</option>`).join('') +
       '<option value="__outro__">+ Outro nome...</option>';
     const actions = document.createElement('div'); actions.className='alt-form-actions';
@@ -748,11 +772,11 @@ function renderEncCell(encTd, r){
     save.addEventListener('click', async ()=>{
       let novoNome = sel.value;
       if(novoNome === '__outro__'){
-        novoNome = prompt('Nome do encarregado:', r.encarregado);
+        novoNome = prompt('Nome do líder:', r.encarregado);
         if(!novoNome) return;
         novoNome = novoNome.trim();
       }
-      if(!novoNome){ toast('Escolha um encarregado.'); return; }
+      if(!novoNome){ toast('Escolha um líder.'); return; }
       const ok = await updateRegistro(r.id, {encarregado: novoNome});
       if(ok){ r.encarregado = novoNome; render(); }
     });
@@ -841,7 +865,7 @@ function renderArchiveCell(archTd, r){
     btn.innerHTML = '✓ Arquivado';
     btn.title = 'Arquivado por '+(r.arquivado_por||'')+' em '+fmt(r.arquivado_em)+' — clique pra desarquivar';
     btn.addEventListener('click', async ()=>{
-      if(!confirm('Desarquivar este registro? Ele volta a aparecer pros encarregados.')) return;
+      if(!confirm('Desarquivar este registro? Ele volta a aparecer pros líderes.')) return;
       const patch = {arquivado:false, arquivado_em:null, arquivado_por:null};
       const ok = await updateRegistro(r.id, patch);
       if(ok){ Object.assign(r, patch); render(); }
@@ -853,7 +877,7 @@ function renderArchiveCell(archTd, r){
     btn.title = 'Confirmar que o ajuste já foi feito no relógio de ponto';
     btn.innerHTML = '✓';
     btn.addEventListener('click', async ()=>{
-      if(!confirm('Confirmar que esse registro já foi ajustado no ponto? Ele será arquivado e os encarregados deixam de ter acesso a ele.')) return;
+      if(!confirm('Confirmar que esse registro já foi ajustado no ponto? Ele será arquivado e os líderes deixam de ter acesso a ele.')) return;
       const patch = {arquivado:true, arquivado_em: now(), arquivado_por: meuPerfil.nome};
       const ok = await updateRegistro(r.id, patch);
       if(ok){ Object.assign(r, patch); render(); }
@@ -874,12 +898,13 @@ document.getElementById('tbody').addEventListener('click', async (e)=>{
 });
 document.getElementById('filterDia').addEventListener('change', render);
 document.getElementById('filterEncarregado').addEventListener('change', render);
-const activeStatusFilters = new Set();
+let activeStatusFilter = null;
 document.querySelectorAll('#statusChips .chip').forEach(chip=>{
   chip.addEventListener('click', ()=>{
     const st = chip.getAttribute('data-status');
-    if(activeStatusFilters.has(st)){ activeStatusFilters.delete(st); chip.classList.remove('active'); }
-    else { activeStatusFilters.add(st); chip.classList.add('active'); }
+    document.querySelectorAll('#statusChips .chip').forEach(c=>c.classList.remove('active'));
+    if(activeStatusFilter === st){ activeStatusFilter = null; }
+    else { activeStatusFilter = st; chip.classList.add('active'); }
     render();
   });
 });
@@ -899,7 +924,7 @@ function buildResumoData(){
   const pendentes = registros.filter(r => !r.arquivado && !r.justificativa && (fDia === '__todos__' ? true : r.data === dia));
   const porEncarregado = {};
   for(const r of pendentes){
-    const enc = r.encarregado || '(sem encarregado)';
+    const enc = r.encarregado || '(sem líder)';
     if(!porEncarregado[enc]) porEncarregado[enc] = [];
     porEncarregado[enc].push(r);
   }
@@ -945,7 +970,7 @@ document.getElementById('btnResumoCopiar').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnExport').addEventListener('click', ()=>{
-  const header = ['Encarregado','Mat','Colaborador','Data','Dia','E1','S1','E2','S2','Observação','Justificativa','Atualizado (Justificativa)','Alteração','Nota Alteração','Atualizado (Alteração)','Confirmado Por','Confirmado Em'];
+  const header = ['Líder','Mat','Colaborador','Data','Dia','E1','S1','E2','S2','Observação','Justificativa','Atualizado (Justificativa)','Alteração','Nota Alteração','Atualizado (Alteração)','Confirmado Por','Confirmado Em'];
   const rows = registros.map(r=>[r.encarregado,r.matricula,r.nome,r.data,r.dia,r.e1,r.s1,r.e2,r.s2,r.observacao,r.justificativa,fmt(r.just_atualizado_em),r.alteracao_codigo,r.alteracao_nota,fmt(r.alteracao_em),r.confirmado_por,fmt(r.confirmado_em)]);
   const csv = [header, ...rows].map(row => row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(';')).join('\n');
   const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
@@ -995,7 +1020,7 @@ async function renderAccounts(){
       <span class="email">${escapeHtml(a.email)}</span>
       <select data-papel="${escapeHtml(a.email)}">
         ${a.papel==='pendente' ? '<option value="pendente" selected disabled>Escolher papel...</option>' : ''}
-        <option value="encarregado" ${a.papel==='encarregado'?'selected':''}>Encarregado</option>
+        <option value="encarregado" ${a.papel==='encarregado'?'selected':''}>Líder</option>
         <option value="rh" ${a.papel==='rh'?'selected':''}>RH</option>
         <option value="admin" ${a.papel==='admin'?'selected':''}>Admin</option>
       </select>
@@ -1136,7 +1161,8 @@ function hideAllGates(){
 function applyPermissions(){
   const badge = document.getElementById('userBadge');
   badge.style.display = 'flex';
-  document.getElementById('roleTag').textContent = meuPerfil.papel;
+  const papelLabels = {admin:'Admin', rh:'RH', encarregado:'Líder', pendente:'Pendente'};
+  document.getElementById('roleTag').textContent = papelLabels[meuPerfil.papel] || meuPerfil.papel;
   document.getElementById('userName').textContent = meuPerfil.nome;
 
   const isStaff = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
@@ -1224,6 +1250,20 @@ sb.auth.onAuthStateChange((event, session)=>{
   }
   const {data:{session}} = await sb.auth.getSession();
   await handleSession(session);
+})();
+
+// ============ Barra de rolagem espelhada no topo ============
+(function setupTopScroll(){
+  const top = document.getElementById('scrollTop');
+  const inner = document.getElementById('scrollTopInner');
+  const card = document.querySelector('.table-card');
+  const table = document.getElementById('dataTable');
+  function syncWidth(){ inner.style.width = card.scrollWidth + 'px'; }
+  syncWidth();
+  if(window.ResizeObserver){ new ResizeObserver(syncWidth).observe(table); }
+  let syncing = false;
+  top.addEventListener('scroll', ()=>{ if(syncing) return; syncing=true; card.scrollLeft = top.scrollLeft; syncing=false; });
+  card.addEventListener('scroll', ()=>{ if(syncing) return; syncing=true; top.scrollLeft = card.scrollLeft; syncing=false; });
 })();
 
 // ============ Arrastar a tabela com o mouse ============
