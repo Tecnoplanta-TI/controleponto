@@ -233,6 +233,32 @@
     header.top p{overflow-wrap:break-word;}
     .brand-logo{height:56px;}
     .clocks{width:100%; flex-wrap:wrap; row-gap:10px;}
+
+    /* Tabela vira lista de cartões no mobile — sem precisar arrastar pro lado */
+    .scroll-top, .scroll-hint{display:none !important;}
+    .table-card{overflow:visible; max-height:none; cursor:default; border:none; box-shadow:none; background:transparent;}
+    table{min-width:0; width:100%; border-collapse:separate; border-spacing:0;}
+    thead{display:none;}
+    tbody{display:block;}
+    tr{
+      display:block; width:100%; box-sizing:border-box;
+      background:var(--card); border:1px solid var(--line); border-radius:14px;
+      margin-bottom:12px; padding:6px 14px; box-shadow:var(--shadow);
+    }
+    td{
+      display:block; width:100%; box-sizing:border-box;
+      border:none; border-bottom:1px solid var(--line);
+      padding:9px 0;
+    }
+    td:last-child{border-bottom:none;}
+    td[data-label]:not([data-label=""])::before{
+      content:attr(data-label);
+      display:block; font-size:10px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.05em; color:var(--ink-soft); margin-bottom:4px;
+    }
+    td:empty{padding:0; border:none;}
+    .just-select{width:100%; min-width:0;}
+    .obs{max-width:none;}
   }
 </style>
 </head>
@@ -249,7 +275,7 @@
     </div>
     <div class="clocks">
       <div class="clock"><div class="n" id="pendingCount">0</div><div class="l">pendentes</div></div>
-      <div class="clock"><div class="n alt" id="unconfirmedCount">0</div><div class="l">a confirmar</div></div>
+      <div class="clock"><div class="n alt" id="unconfirmedCount">0</div><div class="l">recusadas</div></div>
       <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
         <div class="user-badge" id="userBadge" style="display:none;">
           <span><span class="role-tag" id="roleTag">RH</span> <span id="userName"></span></span>
@@ -741,9 +767,18 @@ function render(){
   });
   const countersScope = scopeList.filter(r=>!r.arquivado);
 
+  // Contadores do cabeçalho: iguais aos filtros de líder/unidade, mas sem o filtro de dia
+  const headerScope = registros.filter(r=>{
+    if(r.arquivado) return false;
+    if(fEnc && r.encarregado !== fEnc) return false;
+    if(isStaff && fUnidade && fUnidade !== '__todas__' && r.unidade !== fUnidade) return false;
+    if(meuPerfil.papel === 'encarregado' && r.unidade !== meuPerfil.unidade) return false;
+    return true;
+  });
+
   function matchesStatus(r){
     if(!activeStatusFilter) return true;
-    if(activeStatusFilter === 'pending') return !r.justificativa && !r.rejeicao_motivo;
+    if(activeStatusFilter === 'pending') return !r.confirmado_por;
     if(activeStatusFilter === 'filled') return !!r.justificativa;
     if(activeStatusFilter === 'altered') return !!r.alteracao_codigo;
     if(activeStatusFilter === 'unconfirmed') return r.justificativa && !r.confirmado_por;
@@ -784,21 +819,21 @@ function render(){
       const ehConferencia = codigoAtual && normLoose(codigoAtual.descricao).includes('conferencia');
       tr.className = r.alteracao_codigo ? 'altered' : (ehConferencia ? 'conferencia' : (r.confirmado_por ? 'resolved' : (r.justificativa ? 'awaiting' : (r.rejeicao_motivo ? 'rejected' : ''))));
       tr.innerHTML = `
-        <td class="enc-cell"></td>
-        <td class="mono">${escapeHtml(r.matricula)}</td>
-        <td>${escapeHtml(r.nome)}</td>
-        <td class="mono">${escapeHtml(r.data)}</td>
-        <td>${escapeHtml(r.dia)}</td>
-        <td class="mono">${escapeHtml(r.e1)}</td>
-        <td class="mono">${escapeHtml(r.s1)}</td>
-        <td class="mono">${escapeHtml(r.e2)}</td>
-        <td class="mono">${escapeHtml(r.s2)}</td>
-        <td class="obs">${escapeHtml(r.observacao)}</td>
-        <td class="just-cell"></td>
-        <td class="alt-cell"></td>
-        <td class="confirm-cell"></td>
-        <td class="no-print arch-cell"></td>
-        <td class="no-print">${meuPerfil.papel!=='encarregado' ? `<button class="del-btn" data-del="${r.id}" title="Remover linha">✕</button>` : ''}</td>
+        <td class="enc-cell" data-label="Líder"></td>
+        <td class="mono" data-label="Mat">${escapeHtml(r.matricula)}</td>
+        <td data-label="Colaborador">${escapeHtml(r.nome)}</td>
+        <td class="mono" data-label="Data">${escapeHtml(r.data)}</td>
+        <td data-label="Dia">${escapeHtml(r.dia)}</td>
+        <td class="mono" data-label="E1">${escapeHtml(r.e1)}</td>
+        <td class="mono" data-label="S1">${escapeHtml(r.s1)}</td>
+        <td class="mono" data-label="E2">${escapeHtml(r.e2)}</td>
+        <td class="mono" data-label="S2">${escapeHtml(r.s2)}</td>
+        <td class="obs" data-label="Observação">${escapeHtml(r.observacao)}</td>
+        <td class="just-cell" data-label="Justificativa"></td>
+        <td class="alt-cell" data-label="Alteração"></td>
+        <td class="confirm-cell" data-label="Confirmação"></td>
+        <td class="no-print arch-cell" data-label="Ponto ajustado"></td>
+        <td class="no-print" data-label="">${meuPerfil.papel!=='encarregado' ? `<button class="del-btn" data-del="${r.id}" title="Remover linha">✕</button>` : ''}</td>
       `;
       renderEncCell(tr.querySelector('.enc-cell'), r);
       const justTd = tr.querySelector('.just-cell');
@@ -845,7 +880,7 @@ function render(){
       tbody.appendChild(tr);
     }
   }
-  updateCounters(countersScope);
+  updateCounters(headerScope);
 }
 
 function renderTrocaFields(justTd, r){
@@ -1071,8 +1106,8 @@ function renderArchiveCell(archTd, r){
   }
 }
 function updateCounters(scope){
-  document.getElementById('pendingCount').textContent = scope.filter(r=>!r.justificativa).length;
-  document.getElementById('unconfirmedCount').textContent = scope.filter(r=>r.justificativa && !r.confirmado_por).length;
+  document.getElementById('pendingCount').textContent = scope.filter(r=>!r.confirmado_por).length;
+  document.getElementById('unconfirmedCount').textContent = scope.filter(r=>!r.justificativa && !!r.rejeicao_motivo).length;
 }
 document.getElementById('tbody').addEventListener('click', async (e)=>{
   const btn = e.target.closest('[data-del]'); if(!btn) return;
