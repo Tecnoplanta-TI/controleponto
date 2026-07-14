@@ -192,6 +192,7 @@
   .resumo-actions button{flex:1;}
   .resumo-body{padding:16px; max-width:600px; margin:0 auto;}
   .resumo-card{background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:14px; box-shadow:var(--shadow);}
+  .resumo-card-alert{background:var(--red-bg); color:var(--red); font-weight:700; font-size:12px; text-align:center; border-radius:8px; padding:6px 8px; margin-bottom:10px;}
   .resumo-card-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
   .resumo-card-head b{font-size:16px; font-family:'Space Grotesk',sans-serif;}
   .resumo-badge{background:var(--red); color:#fff; font-weight:700; font-size:13px; padding:3px 11px; border-radius:20px;}
@@ -1328,6 +1329,7 @@ function openResumo(){
   } else {
     body.innerHTML = grupos.map(([enc, items], idx)=>`
       <div class="resumo-card" id="resumoCard${idx}">
+        <div class="resumo-card-alert">⚠️ Pendências - Folha Azul - ${hojeBR()}</div>
         <div class="resumo-card-head">
           <b>${escapeHtml(enc)}</b>
           <span style="display:flex; align-items:center; gap:8px;">
