@@ -205,9 +205,25 @@
   @media print{ .resumo-overlay{position:static;} }
 
   @media print{
-    .toolbar, header.top, .footer-note, .brand-footer, .no-print{display:none !important;}
-    .table-card{max-height:none; overflow:visible; box-shadow:none; border:none;}
+    @page{ size: landscape; margin: 10mm; }
+    .toolbar, header.top, .footer-note, .brand-footer, .scroll-top, .no-print{display:none !important;}
+    .tabs-row, .chips-row{display:none !important;}
     body{background:#fff;}
+    .wrap{max-width:100%; padding:0; margin:0;}
+    .table-card{border:none; box-shadow:none; overflow:visible !important; max-height:none !important; cursor:default;}
+    table{min-width:0 !important; width:100%; table-layout:auto; border-collapse:collapse;}
+    thead th{background:#eee !important; color:#000 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; padding:5px 6px; font-size:9px;}
+    tbody td{padding:4px 6px; font-size:9.5px;}
+    tbody tr{page-break-inside:avoid;}
+    .ts{font-size:7.5px;}
+    .obs{max-width:none;}
+
+    /* Esconder botões de ação, mostrar só o conteúdo/valor */
+    .alt-btn, .confirm-btn:not(.done), .del-btn{display:none !important;}
+    input, textarea, .just-select, .alt-chip, .confirm-btn.done{
+      border:none !important; background:none !important; box-shadow:none !important;
+      padding:0 !important; -webkit-appearance:none; appearance:none; color:#000 !important;
+    }
   }
   @media (max-width:720px){
     header.top{flex-direction:column; align-items:flex-start; overflow:visible;}
@@ -236,6 +252,7 @@
       <div class="clock"><div class="n alt" id="unconfirmedCount">0</div><div class="l">a confirmar</div></div>
       <div class="user-badge" id="userBadge" style="display:none;">
         <span><span class="role-tag" id="roleTag">RH</span> <span id="userName"></span></span>
+        <button id="btnMinhaSenha">senha</button>
         <button id="btnLogout">sair</button>
       </div>
     </div>
@@ -336,6 +353,26 @@
       <button class="btn-primary" id="btnAddCode">Adicionar</button>
     </div>
     <div class="modal-actions"><button class="btn-primary" data-close="codesOverlay">Concluir</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="minhaSenhaOverlay">
+  <div class="modal">
+    <button class="close-x" data-close="minhaSenhaOverlay">✕</button>
+    <h2>Trocar minha senha</h2>
+    <p>Defina uma nova senha pra sua conta.</p>
+    <div class="login-field">
+      <label>Nova senha</label>
+      <input type="password" id="minhaSenha1" placeholder="Nova senha (mín. 6 caracteres)">
+    </div>
+    <div class="login-field">
+      <label>Repetir nova senha</label>
+      <input type="password" id="minhaSenha2" placeholder="Digite de novo">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" data-close="minhaSenhaOverlay">Cancelar</button>
+      <button class="btn-primary" id="btnSalvarMinhaSenha">Salvar</button>
+    </div>
   </div>
 </div>
 
@@ -1321,6 +1358,23 @@ document.getElementById('btnSalvarNovaSenha').addEventListener('click', async ()
 });
 
 document.getElementById('btnLogout').addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
+
+document.getElementById('btnMinhaSenha').addEventListener('click', ()=>{
+  document.getElementById('minhaSenha1').value = '';
+  document.getElementById('minhaSenha2').value = '';
+  openModal('minhaSenhaOverlay');
+});
+document.getElementById('btnSalvarMinhaSenha').addEventListener('click', async ()=>{
+  const s1 = document.getElementById('minhaSenha1').value;
+  const s2 = document.getElementById('minhaSenha2').value;
+  if(!s1 || !s2){ toast('Preencha as duas senhas.'); return; }
+  if(s1.length < 6){ toast('A senha precisa ter pelo menos 6 caracteres.'); return; }
+  if(s1 !== s2){ toast('As senhas não são iguais.'); return; }
+  const {error} = await sb.auth.updateUser({ password: s1 });
+  if(error){ toast('Erro ao salvar: '+error.message); return; }
+  toast('Senha atualizada!');
+  closeModal('minhaSenhaOverlay');
+});
 document.getElementById('btnBlockedLogout').addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
 document.getElementById('btnPendingLogout').addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
 
