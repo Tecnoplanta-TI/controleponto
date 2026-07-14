@@ -427,6 +427,7 @@
         <option value="encarregado">Líder</option>
         <option value="rh">RH</option>
         <option value="admin">Admin</option>
+        <option value="visualizador">Visualizador</option>
       </select>
       <button class="btn-primary" id="btnAddAccount">Adicionar</button>
     </div>
@@ -561,6 +562,8 @@ function toast(msg){
 function now(){ return new Date().toISOString(); }
 function fmt(iso){ return iso ? new Date(iso).toLocaleString('pt-BR') : ''; }
 function uid(){ return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function podeEditar(){ return meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh'; }
+function vePorTodasUnidades(){ return meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh' || meuPerfil.papel === 'visualizador'; }
 function normalize(s){ return String(s==null?'':s).toLowerCase().trim(); }
 function stripAccents(s){ return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function normLoose(s){ return stripAccents(normalize(s)); }
@@ -712,6 +715,16 @@ function isoToDmy(iso){
   const [yyyy,mm,dd] = parts;
   return `${dd}/${mm}/${yyyy}`;
 }
+function somaHorario(hhmm, horas, minutos){
+  if(!hhmm || !hhmm.includes(':')) return '';
+  const [h,m] = hhmm.split(':').map(Number);
+  if(isNaN(h) || isNaN(m)) return '';
+  let total = ((h*60+m) + horas*60 + minutos) % (24*60);
+  if(total < 0) total += 24*60;
+  const hh = String(Math.floor(total/60)).padStart(2,'0');
+  const mm = String(total%60).padStart(2,'0');
+  return `${hh}:${mm}`;
+}
 function parseDataBR(d){
   if(!d) return 0;
   const parts = d.split('/');
@@ -742,7 +755,7 @@ let encFilterInitializedFor = null;
 function populateEncarregadoFilter(){
   const sel = document.getElementById('filterEncarregado');
   const current = sel.value;
-  const isStaff = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
+  const isStaff = vePorTodasUnidades();
   const fUnidade = document.getElementById('filterUnidade').value;
   const pool = registros.filter(r=>{
     if(isStaff && fUnidade && fUnidade !== '__todas__' && r.unidade !== fUnidade) return false;
@@ -771,7 +784,7 @@ function render(){
   const fDia = document.getElementById('filterDia').value;
   const fEnc = document.getElementById('filterEncarregado').value;
   const fUnidade = document.getElementById('filterUnidade').value;
-  const isStaff = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
+  const isStaff = vePorTodasUnidades();
   const q = document.getElementById('searchBox').value.trim().toLowerCase();
 
   const scopeList = registros.filter(r=>{
@@ -850,14 +863,14 @@ function render(){
         <td class="alt-cell" data-label="✏️ Alteração"></td>
         <td class="confirm-cell" data-label="✅ Confirmação"></td>
         <td class="no-print arch-cell" data-label="🗄️ Ponto ajustado"></td>
-        <td class="no-print" data-label="">${meuPerfil.papel!=='encarregado' ? `<button class="del-btn" data-del="${r.id}" title="Remover linha">✕</button>` : ''}</td>
+        <td class="no-print" data-label="">${podeEditar() ? `<button class="del-btn" data-del="${r.id}" title="Remover linha">✕</button>` : ''}</td>
       `;
       renderEncCell(tr.querySelector('.enc-cell'), r);
       const justTd = tr.querySelector('.just-cell');
       const sel = document.createElement('select');
       sel.className = 'just-select ' + (r.justificativa ? 'filled' : 'pending');
       sel.innerHTML = codeOptionsHtml(r.justificativa);
-      sel.disabled = !!r.confirmado_por;
+      sel.disabled = !!r.confirmado_por || meuPerfil.papel === 'visualizador';
       sel.title = r.confirmado_por ? 'Já confirmado/assinado — use o campo Alteração pra corrigir' : '';
       sel.addEventListener('change', async (e)=>{
         const val = e.target.value;
@@ -938,9 +951,9 @@ function renderTrocaFields(justTd, r){
     textarea.placeholder = 'Descreva a situação...';
     textarea.style.cssText = 'font-size:11.5px; padding:5px 6px; width:100%; min-width:170px; border:1px solid var(--line); border-radius:6px; resize:vertical; font-family:inherit;';
     textarea.value = r.conferencia_obs || '';
-    if(r.confirmado_por){
+    if(r.confirmado_por || meuPerfil.papel === 'visualizador'){
       textarea.disabled = true;
-      textarea.title = 'Já assinado — o texto não pode mais ser alterado';
+      textarea.title = r.confirmado_por ? 'Já assinado — o texto não pode mais ser alterado' : '';
     } else {
       textarea.addEventListener('blur', async ()=>{
         if(textarea.value === (r.conferencia_obs||'')) return;
@@ -958,15 +971,26 @@ function renderTrocaFields(justTd, r){
   wrap.style.cssText = 'margin-top:5px;';
   const input = document.createElement('input');
   input.style.cssText = 'font-size:11.5px; padding:5px 6px; width:100%; border:1px solid var(--line); border-radius:6px;';
+  if(meuPerfil.papel === 'visualizador') input.disabled = true;
 
   if(ehTrocaHorario){
     input.type = 'time';
     input.value = r.novo_horario || '';
+    const saidaSpan = document.createElement('div');
+    saidaSpan.style.cssText = 'font-size:11px; color:var(--ink-soft); margin-top:3px;';
+    saidaSpan.textContent = r.novo_horario ? '🕐 Saída prevista: '+somaHorario(r.novo_horario, 9, 48) : '';
+    input.addEventListener('input', ()=>{
+      saidaSpan.textContent = input.value ? '🕐 Saída prevista: '+somaHorario(input.value, 9, 48) : '';
+    });
     input.addEventListener('change', async ()=>{
       if(input.value === (r.novo_horario||'')) return;
       const ok = await updateRegistro(r.id, {novo_horario: input.value});
       if(ok){ r.novo_horario = input.value; }
     });
+    wrap.appendChild(input);
+    wrap.appendChild(saidaSpan);
+    justTd.appendChild(wrap);
+    return;
   } else {
     input.type = 'date';
     input.value = dmyToIso(r.novo_dia);
@@ -991,16 +1015,17 @@ function renderEncCell(encTd, r){
   nameSpan.textContent = r.encarregado;
   encTd.appendChild(nameSpan);
 
-  const isStaff = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
-  if(isStaff && r.unidade){
+  if(vePorTodasUnidades() && r.unidade){
     const tag = document.createElement('span');
     tag.textContent = r.unidade;
     tag.style.cssText = 'display:inline-block; font-size:10px; font-weight:700; color:var(--brand); background:#EAF7EE; border-radius:5px; padding:1px 6px; margin-top:2px;';
     encTd.appendChild(tag);
   }
 
-  const isOwn = normalize(r.encarregado) === normalize(meuPerfil.nome);
-  if(!isStaff && !isOwn) return; // encarregado só encaminha os próprios funcionários
+  if(!podeEditar()){
+    const isOwn = normalize(r.encarregado) === normalize(meuPerfil.nome);
+    if(!isOwn) return; // encarregado só encaminha os próprios funcionários; visualizador nunca encaminha
+  }
 
   const btn = document.createElement('button');
   btn.className = 'alt-btn';
@@ -1047,7 +1072,7 @@ function renderAltCell(altTd, r){
     const chip = document.createElement('div');
     chip.className = 'alt-chip';
     let resumo = r.alteracao_codigo || '';
-    if(r.alteracao_novo_horario) resumo += ' • novo horário: '+r.alteracao_novo_horario;
+    if(r.alteracao_novo_horario) resumo += ' • novo horário: '+r.alteracao_novo_horario+' (saída '+somaHorario(r.alteracao_novo_horario,9,48)+')';
     if(r.alteracao_novo_dia) resumo += ' • novo dia: '+r.alteracao_novo_dia;
     chip.textContent = '✓ '+resumo;
     chip.style.cursor = 'default';
@@ -1055,6 +1080,14 @@ function renderAltCell(altTd, r){
     const ts = document.createElement('span'); ts.className='ts';
     ts.textContent = 'Assinado por '+r.alteracao_confirmado_por+' em '+fmt(r.alteracao_confirmado_em);
     altTd.appendChild(ts);
+    return;
+  }
+
+  if(meuPerfil.papel === 'visualizador'){
+    const span = document.createElement('span');
+    span.textContent = '⏳ Aguardando correção do líder';
+    span.style.cssText = 'color:var(--ink-soft); font-size:11px; font-style:italic;';
+    altTd.appendChild(span);
     return;
   }
 
@@ -1075,11 +1108,18 @@ function renderAltCell(altTd, r){
       inp.type = 'time';
       inp.value = r.alteracao_novo_horario || '';
       inp.style.cssText = 'font-size:11.5px; padding:5px 6px; width:100%; border:1px solid var(--line); border-radius:6px; margin-top:5px;';
+      const saidaSpan = document.createElement('div');
+      saidaSpan.style.cssText = 'font-size:11px; color:var(--ink-soft); margin-top:3px;';
+      saidaSpan.textContent = r.alteracao_novo_horario ? '🕐 Saída prevista: '+somaHorario(r.alteracao_novo_horario, 9, 48) : '';
+      inp.addEventListener('input', ()=>{
+        saidaSpan.textContent = inp.value ? '🕐 Saída prevista: '+somaHorario(inp.value, 9, 48) : '';
+      });
       inp.addEventListener('change', async ()=>{
         const ok = await updateRegistro(r.id, {alteracao_novo_horario: inp.value});
         if(ok) r.alteracao_novo_horario = inp.value;
       });
       fieldsWrap.appendChild(inp);
+      fieldsWrap.appendChild(saidaSpan);
     } else if(desc.includes('troca de dia')){
       const inp = document.createElement('input');
       inp.type = 'date';
@@ -1134,6 +1174,20 @@ function renderAltCell(altTd, r){
 }
 function renderConfirmCell(confTd, r){
   confTd.innerHTML = '';
+
+  if(meuPerfil.papel === 'visualizador'){
+    if(r.confirmado_por){
+      const span = document.createElement('span');
+      span.textContent = '✓ '+r.confirmado_por;
+      span.style.cssText = 'color:var(--green); font-weight:700; font-size:11.5px;';
+      span.title = 'Confirmado em '+fmt(r.confirmado_em);
+      confTd.appendChild(span);
+      const ts=document.createElement('span'); ts.className='ts'; ts.textContent=fmt(r.confirmado_em);
+      confTd.appendChild(ts);
+    }
+    return;
+  }
+
   const btn = document.createElement('button');
   if(r.confirmado_por){
     btn.className = 'confirm-btn done';
@@ -1174,8 +1228,18 @@ function renderConfirmCell(confTd, r){
 }
 function renderArchiveCell(archTd, r){
   archTd.innerHTML = '';
-  const isStaff = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
-  if(!isStaff) return; // encarregado não vê essa ação
+  if(meuPerfil.papel === 'encarregado') return; // líder não vê essa coluna
+
+  if(meuPerfil.papel === 'visualizador'){
+    if(r.arquivado){
+      const span = document.createElement('span');
+      span.textContent = '✓ Arquivado';
+      span.title = 'Arquivado por '+(r.arquivado_por||'')+' em '+fmt(r.arquivado_em);
+      span.style.cssText = 'color:var(--green); font-weight:700; font-size:11.5px;';
+      archTd.appendChild(span);
+    }
+    return;
+  }
 
   if(r.arquivado){
     const btn = document.createElement('button');
@@ -1377,6 +1441,7 @@ async function renderAccounts(){
         <option value="encarregado" ${a.papel==='encarregado'?'selected':''}>Líder</option>
         <option value="rh" ${a.papel==='rh'?'selected':''}>RH</option>
         <option value="admin" ${a.papel==='admin'?'selected':''}>Admin</option>
+        <option value="visualizador" ${a.papel==='visualizador'?'selected':''}>Visualizador</option>
       </select>
       <select data-unidade="${escapeHtml(a.email)}" title="Unidade" style="${a.papel==='encarregado' ? '' : 'display:none;'}">
         <option value="">Sem unidade</option>
@@ -1548,19 +1613,20 @@ function hideAllGates(){
 function applyPermissions(){
   const badge = document.getElementById('userBadge');
   badge.style.display = 'flex';
-  const papelLabels = {admin:'Admin', rh:'RH', encarregado:'Líder', pendente:'Pendente'};
+  const papelLabels = {admin:'Admin', rh:'RH', encarregado:'Líder', visualizador:'Visualizador', pendente:'Pendente'};
   document.getElementById('roleTag').textContent = papelLabels[meuPerfil.papel] || meuPerfil.papel;
   document.getElementById('userName').textContent = meuPerfil.nome;
 
-  const isStaff = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
-  document.getElementById('btnImport').style.display = isStaff ? 'inline-block' : 'none';
-  document.getElementById('btnCodes').style.display = isStaff ? 'inline-block' : 'none';
+  const isEditor = podeEditar();
+  const isViewerScope = vePorTodasUnidades();
+  document.getElementById('btnImport').style.display = isEditor ? 'inline-block' : 'none';
+  document.getElementById('btnCodes').style.display = isEditor ? 'inline-block' : 'none';
   document.getElementById('btnAccounts').style.display = meuPerfil.papel === 'admin' ? 'inline-block' : 'none';
-  document.getElementById('archiveTabs').style.display = isStaff ? 'flex' : 'none';
-  document.getElementById('btnResumo').style.display = isStaff ? 'inline-block' : 'none';
+  document.getElementById('archiveTabs').style.display = isViewerScope ? 'flex' : 'none';
+  document.getElementById('btnResumo').style.display = isViewerScope ? 'inline-block' : 'none';
 
   const unidadeSel = document.getElementById('filterUnidade');
-  if(isStaff){
+  if(isViewerScope){
     unidadeSel.style.display = 'block';
     if(!unidadeSel.dataset.loaded){
       unidadeSel.innerHTML = '<option value="__todas__">Todas as unidades</option>' +
@@ -1588,7 +1654,7 @@ async function populateImpersonateSelect(){
   const current = sel.value;
   const {data, error} = await sb.from('perfis').select('*').neq('papel','pendente').order('nome');
   if(error) return;
-  const papelLabels = {admin:'Admin', rh:'RH', encarregado:'Líder'};
+  const papelLabels = {admin:'Admin', rh:'RH', encarregado:'Líder', visualizador:'Visualizador'};
   sel.innerHTML = '<option value="">Ver como (você mesmo)</option>' +
     data.filter(p=>p.email !== realAdminPerfil.email).map(p=>
       `<option value="${escapeHtml(p.email)}">${escapeHtml(p.nome)} (${papelLabels[p.papel]||p.papel})</option>`
