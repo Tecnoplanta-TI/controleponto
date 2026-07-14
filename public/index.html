@@ -1003,6 +1003,9 @@ function renderEncCell(encTd, r){
 
 function renderAltCell(altTd, r){
   altTd.innerHTML = '';
+  if(!r.confirmado_por){
+    return; // só é possível alterar depois que o lançamento foi confirmado/assinado
+  }
   if(r.alteracao_codigo){
     const chip = document.createElement('div');
     chip.className = 'alt-chip';
