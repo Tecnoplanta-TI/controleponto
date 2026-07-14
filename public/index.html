@@ -34,7 +34,7 @@
   header.top h1{font-family:'Space Grotesk',sans-serif; font-size:21px; margin:0 0 4px 0; letter-spacing:.2px; padding-left:0;}
   header.top p{margin:0;padding-left:0;color:#DFF3E8;font-size:13px;}
   .header-left{display:flex; align-items:center; gap:16px; padding-left:20px; position:relative; z-index:1;}
-  .brand-logo{height:44px; width:auto; max-width:140px; object-fit:contain; background:#fff; border-radius:8px; padding:5px 8px;}
+  .brand-logo{height:79px; width:auto; max-width:250px; object-fit:contain; background:#fff; border-radius:8px; padding:5px 8px;}
   .clocks{display:flex; gap:26px; align-items:center;}
   .clock{font-family:'Roboto Mono',monospace; text-align:right; line-height:1;}
   .clock .n{font-size:34px;font-weight:600;color:var(--amber);}
@@ -90,6 +90,8 @@
   tbody tr.resolved:nth-child(even){background:#dff3ea;}
   tbody tr.altered{background:var(--amber-bg) !important;}
   tbody tr.rejected{background:var(--red-bg) !important;}
+  tbody tr.awaiting{background:#EAF2FB !important;}
+  tbody tr.conferencia{background:#F1E9FB !important;}
   tbody tr:hover{background:#F0F4FF;}
   .mono{font-family:'Roboto Mono',monospace; font-size:12px; color:var(--ink-soft);}
   .obs{max-width:190px; color:var(--ink-soft); font-size:12px;}
@@ -142,7 +144,7 @@
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
   .footer-note{text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16px;}
   .brand-footer{background:var(--brand); padding:22px; display:flex; justify-content:center; align-items:center; margin-top:26px;}
-  .brand-footer img{height:38px; width:auto; max-width:160px; object-fit:contain; background:#fff; border-radius:8px; padding:5px 10px;}
+  .brand-footer img{height:68px; width:auto; max-width:290px; object-fit:contain; background:#fff; border-radius:8px; padding:5px 10px;}
 
   .tabs-row{display:flex; gap:8px; margin:16px 0 0;}
   .tab-btn{background:#fff; border:1px solid var(--line); color:var(--ink-soft); padding:9px 16px; border-radius:9px 9px 0 0; font-weight:700; font-size:13px; cursor:pointer; border-bottom:none; position:relative; top:1px;}
@@ -254,6 +256,7 @@
     <button class="chip" data-status="altered">Alteradas</button>
     <button class="chip" data-status="unconfirmed">Não confirmadas</button>
     <button class="chip" data-status="rejected">Recusadas</button>
+    <button class="chip" data-status="conferencia">Em conferência</button>
   </div>
 
   <div class="scroll-top" id="scrollTop"><div id="scrollTopInner"></div></div>
@@ -462,6 +465,8 @@ function now(){ return new Date().toISOString(); }
 function fmt(iso){ return iso ? new Date(iso).toLocaleString('pt-BR') : ''; }
 function uid(){ return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function normalize(s){ return String(s==null?'':s).toLowerCase().trim(); }
+function stripAccents(s){ return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function normLoose(s){ return stripAccents(normalize(s)); }
 function escapeHtml(s){
   return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
@@ -648,6 +653,10 @@ function render(){
     if(activeStatusFilter === 'altered') return !!r.alteracao_codigo;
     if(activeStatusFilter === 'unconfirmed') return r.justificativa && !r.confirmado_por;
     if(activeStatusFilter === 'rejected') return !r.justificativa && !!r.rejeicao_motivo;
+    if(activeStatusFilter === 'conferencia'){
+      const codigo = codigos.find(c => c.sigla === r.justificativa);
+      return !!(codigo && normLoose(codigo.descricao).includes('conferencia'));
+    }
     return true;
   }
 
@@ -676,7 +685,9 @@ function render(){
     emptyState.style.display = 'none';
     for(const r of list){
       const tr = document.createElement('tr');
-      tr.className = r.alteracao_codigo ? 'altered' : (r.justificativa ? 'resolved' : (r.rejeicao_motivo ? 'rejected' : ''));
+      const codigoAtual = codigos.find(c => c.sigla === r.justificativa);
+      const ehConferencia = codigoAtual && normLoose(codigoAtual.descricao).includes('conferencia');
+      tr.className = r.alteracao_codigo ? 'altered' : (ehConferencia ? 'conferencia' : (r.confirmado_por ? 'resolved' : (r.justificativa ? 'awaiting' : (r.rejeicao_motivo ? 'rejected' : ''))));
       tr.innerHTML = `
         <td class="enc-cell"></td>
         <td class="mono">${escapeHtml(r.matricula)}</td>
@@ -707,6 +718,7 @@ function render(){
       });
       justTd.appendChild(sel);
       if(r.just_atualizado_em){ const ts=document.createElement('span'); ts.className='ts'; ts.textContent=fmt(r.just_atualizado_em); justTd.appendChild(ts); }
+      renderTrocaFields(justTd, r);
 
       const isStaffRow = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
       if(isStaffRow && r.justificativa && !archiveView){
@@ -739,6 +751,64 @@ function render(){
     }
   }
   updateCounters(countersScope);
+}
+
+function renderTrocaFields(justTd, r){
+  const codigo = codigos.find(c => c.sigla === r.justificativa);
+  if(!codigo) return;
+  const desc = normLoose(codigo.descricao);
+  const ehConferencia = desc.includes('conferencia');
+  const ehTrocaHorario = desc.includes('troca de horario');
+  const ehTrocaDia = desc.includes('troca de dia');
+  if(!ehTrocaHorario && !ehTrocaDia && !ehConferencia) return;
+
+  if(ehConferencia){
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-top:5px;';
+    const label = document.createElement('div');
+    label.textContent = '💬 Explique pro RH decidir o código certo:';
+    label.style.cssText = 'font-size:10.5px; color:var(--ink-soft); margin-bottom:3px;';
+    const textarea = document.createElement('textarea');
+    textarea.rows = 2;
+    textarea.placeholder = 'Descreva a situação...';
+    textarea.style.cssText = 'font-size:11.5px; padding:5px 6px; width:100%; min-width:170px; border:1px solid var(--line); border-radius:6px; resize:vertical; font-family:inherit;';
+    textarea.value = r.conferencia_obs || '';
+    textarea.addEventListener('blur', async ()=>{
+      if(textarea.value === (r.conferencia_obs||'')) return;
+      const ok = await updateRegistro(r.id, {conferencia_obs: textarea.value.trim()});
+      if(ok){ r.conferencia_obs = textarea.value.trim(); }
+    });
+    wrap.appendChild(label);
+    wrap.appendChild(textarea);
+    justTd.appendChild(wrap);
+    return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-top:5px;';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.style.cssText = 'font-size:11.5px; padding:5px 6px; width:100%; border:1px solid var(--line); border-radius:6px;';
+
+  if(ehTrocaHorario){
+    input.placeholder = 'Novo horário (ex: 08:00)';
+    input.value = r.novo_horario || '';
+    input.addEventListener('blur', async ()=>{
+      if(input.value === (r.novo_horario||'')) return;
+      const ok = await updateRegistro(r.id, {novo_horario: input.value.trim()});
+      if(ok){ r.novo_horario = input.value.trim(); }
+    });
+  } else {
+    input.placeholder = 'Novo dia (ex: 15/07/2026)';
+    input.value = r.novo_dia || '';
+    input.addEventListener('blur', async ()=>{
+      if(input.value === (r.novo_dia||'')) return;
+      const ok = await updateRegistro(r.id, {novo_dia: input.value.trim()});
+      if(ok){ r.novo_dia = input.value.trim(); }
+    });
+  }
+  wrap.appendChild(input);
+  justTd.appendChild(wrap);
 }
 
 function getEncarregadoNames(){
@@ -970,8 +1040,8 @@ document.getElementById('btnResumoCopiar').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnExport').addEventListener('click', ()=>{
-  const header = ['Líder','Mat','Colaborador','Data','Dia','E1','S1','E2','S2','Observação','Justificativa','Atualizado (Justificativa)','Alteração','Nota Alteração','Atualizado (Alteração)','Confirmado Por','Confirmado Em'];
-  const rows = registros.map(r=>[r.encarregado,r.matricula,r.nome,r.data,r.dia,r.e1,r.s1,r.e2,r.s2,r.observacao,r.justificativa,fmt(r.just_atualizado_em),r.alteracao_codigo,r.alteracao_nota,fmt(r.alteracao_em),r.confirmado_por,fmt(r.confirmado_em)]);
+  const header = ['Líder','Mat','Colaborador','Data','Dia','E1','S1','E2','S2','Observação','Justificativa','Novo Horário','Novo Dia','Observação p/ Conferência','Atualizado (Justificativa)','Alteração','Nota Alteração','Atualizado (Alteração)','Confirmado Por','Confirmado Em'];
+  const rows = registros.map(r=>[r.encarregado,r.matricula,r.nome,r.data,r.dia,r.e1,r.s1,r.e2,r.s2,r.observacao,r.justificativa,r.novo_horario,r.novo_dia,r.conferencia_obs,fmt(r.just_atualizado_em),r.alteracao_codigo,r.alteracao_nota,fmt(r.alteracao_em),r.confirmado_por,fmt(r.confirmado_em)]);
   const csv = [header, ...rows].map(row => row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(';')).join('\n');
   const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
