@@ -789,7 +789,7 @@ function render(){
     if(activeStatusFilter === 'filled') return !!r.justificativa;
     if(activeStatusFilter === 'altered') return !!r.alteracao_codigo;
     if(activeStatusFilter === 'unconfirmed') return r.justificativa && !r.confirmado_por;
-    if(activeStatusFilter === 'rejected') return !!r.rejeicao_motivo;
+    if(activeStatusFilter === 'rejected') return !!r.rejeicao_motivo && !r.alteracao_confirmado_por;
     if(activeStatusFilter === 'assinadas') return !!r.confirmado_por;
     if(activeStatusFilter === 'conferencia'){
       const codigo = codigos.find(c => c.sigla === r.justificativa);
@@ -825,7 +825,7 @@ function render(){
       const tr = document.createElement('tr');
       const codigoAtual = codigos.find(c => c.sigla === r.justificativa);
       const ehConferencia = codigoAtual && normLoose(codigoAtual.descricao).includes('conferencia');
-      tr.className = r.alteracao_codigo ? 'altered' : (r.rejeicao_motivo ? 'rejected' : (ehConferencia ? 'conferencia' : (r.confirmado_por ? 'resolved' : (r.justificativa ? 'awaiting' : ''))));
+      tr.className = (r.rejeicao_motivo && !r.alteracao_confirmado_por) ? 'rejected' : (ehConferencia ? 'conferencia' : (r.confirmado_por ? 'resolved' : (r.justificativa ? 'awaiting' : '')));
       tr.innerHTML = `
         <td class="enc-cell" data-label="👤 Líder"></td>
         <td class="mono mcell-half" data-label="🔖 Mat">${escapeHtml(r.matricula)}</td>
@@ -874,9 +874,14 @@ function render(){
           if(!motivo || !motivo.trim()) return;
           let patch;
           if(r.confirmado_por){
-            // já confirmado: só sinaliza o problema, não reabre o dropdown.
-            // a correção precisa ser feita pelo campo Alteração.
-            patch = {rejeicao_motivo: motivo.trim(), rejeitado_por: meuPerfil.nome, rejeitado_em: now()};
+            // já confirmado: sinaliza o problema e libera um novo ciclo de correção
+            // pela coluna Alteração (limpa uma correção anterior, se houver).
+            patch = {
+              rejeicao_motivo: motivo.trim(), rejeitado_por: meuPerfil.nome, rejeitado_em: now(),
+              alteracao_codigo: null, alteracao_nota: null, alteracao_em: null,
+              alteracao_novo_dia: null, alteracao_novo_horario: null,
+              alteracao_confirmado_por: null, alteracao_confirmado_em: null
+            };
           } else {
             patch = {justificativa: null, just_atualizado_em: null, rejeicao_motivo: motivo.trim(), rejeitado_por: meuPerfil.nome, rejeitado_em: now()};
           }
@@ -886,7 +891,7 @@ function render(){
         justTd.appendChild(document.createElement('br'));
         justTd.appendChild(recBtn);
       }
-      if(r.rejeicao_motivo && !r.alteracao_codigo){
+      if(r.rejeicao_motivo && !r.alteracao_confirmado_por){
         const note = document.createElement('div');
         note.style.cssText = 'color:var(--red); font-size:11px; margin-top:4px; max-width:170px; line-height:1.4;';
         note.innerHTML = r.confirmado_por
@@ -1019,47 +1024,98 @@ function renderEncCell(encTd, r){
 
 function renderAltCell(altTd, r){
   altTd.innerHTML = '';
-  if(!r.confirmado_por){
-    return; // só é possível alterar depois que o lançamento foi confirmado/assinado
+  if(!r.rejeicao_motivo){
+    return; // a coluna Alteração só existe pra lançamentos recusados
   }
-  const isStaffAlt = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
-  if(!isStaffAlt && !r.rejeicao_motivo){
-    return; // líder só mexe de novo se o RH/Admin tiver recusado
-  }
-  if(r.alteracao_codigo){
+
+  if(r.alteracao_confirmado_por){
+    // já corrigido e assinado — mostra só o resultado, travado
     const chip = document.createElement('div');
     chip.className = 'alt-chip';
-    chip.textContent = r.alteracao_codigo + (r.alteracao_nota ? ' • '+r.alteracao_nota : '');
-    chip.title = 'Alterado em '+fmt(r.alteracao_em)+' — clique para editar';
-    chip.addEventListener('click', ()=>showAltForm(altTd, r));
+    let resumo = r.alteracao_codigo || '';
+    if(r.alteracao_novo_horario) resumo += ' • novo horário: '+r.alteracao_novo_horario;
+    if(r.alteracao_novo_dia) resumo += ' • novo dia: '+r.alteracao_novo_dia;
+    chip.textContent = '✓ '+resumo;
+    chip.style.cursor = 'default';
     altTd.appendChild(chip);
-    const ts = document.createElement('span'); ts.className='ts'; ts.textContent = fmt(r.alteracao_em);
+    const ts = document.createElement('span'); ts.className='ts';
+    ts.textContent = 'Assinado por '+r.alteracao_confirmado_por+' em '+fmt(r.alteracao_confirmado_em);
     altTd.appendChild(ts);
-  } else {
-    const btn = document.createElement('button');
-    btn.className = 'alt-btn'; btn.textContent = '+ Alterar';
-    btn.title = 'Usar quando a justificativa precisar ser corrigida depois';
-    btn.addEventListener('click', ()=>showAltForm(altTd, r));
-    altTd.appendChild(btn);
+    return;
   }
-}
-function showAltForm(altTd, r){
-  altTd.innerHTML = '';
+
+  // ainda não corrigido/assinado — mostra o formulário de correção
   const form = document.createElement('div'); form.className = 'alt-form';
-  const sel = document.createElement('select'); sel.innerHTML = codeOptionsHtml(r.alteracao_codigo);
-  const note = document.createElement('input'); note.type='text'; note.placeholder='Nota (ex: atestado entregue 15/07)'; note.value = r.alteracao_nota||'';
-  const actions = document.createElement('div'); actions.className='alt-form-actions';
-  const save = document.createElement('button'); save.className='btn-primary'; save.textContent='Salvar';
-  save.addEventListener('click', async ()=>{
-    if(!sel.value){ toast('Selecione um código.'); return; }
-    const patch = {alteracao_codigo: sel.value, alteracao_nota: note.value.trim(), alteracao_em: now(), rejeicao_motivo: null, rejeitado_por: null, rejeitado_em: null};
+
+  const sel = document.createElement('select');
+  sel.innerHTML = codeOptionsHtml(r.alteracao_codigo);
+
+  const fieldsWrap = document.createElement('div');
+
+  function renderConditionalFields(){
+    fieldsWrap.innerHTML = '';
+    const codigo = codigos.find(c => c.sigla === sel.value);
+    const desc = codigo ? normLoose(codigo.descricao) : '';
+    if(desc.includes('troca de horario')){
+      const inp = document.createElement('input');
+      inp.type = 'time';
+      inp.value = r.alteracao_novo_horario || '';
+      inp.style.cssText = 'font-size:11.5px; padding:5px 6px; width:100%; border:1px solid var(--line); border-radius:6px; margin-top:5px;';
+      inp.addEventListener('change', async ()=>{
+        const ok = await updateRegistro(r.id, {alteracao_novo_horario: inp.value});
+        if(ok) r.alteracao_novo_horario = inp.value;
+      });
+      fieldsWrap.appendChild(inp);
+    } else if(desc.includes('troca de dia')){
+      const inp = document.createElement('input');
+      inp.type = 'date';
+      inp.value = dmyToIso(r.alteracao_novo_dia);
+      inp.style.cssText = 'font-size:11.5px; padding:5px 6px; width:100%; border:1px solid var(--line); border-radius:6px; margin-top:5px;';
+      inp.addEventListener('change', async ()=>{
+        const br = isoToDmy(inp.value);
+        const ok = await updateRegistro(r.id, {alteracao_novo_dia: br});
+        if(ok) r.alteracao_novo_dia = br;
+      });
+      fieldsWrap.appendChild(inp);
+    }
+  }
+  renderConditionalFields();
+
+  sel.addEventListener('change', async ()=>{
+    const ok = await updateRegistro(r.id, {alteracao_codigo: sel.value, alteracao_em: now()});
+    if(ok){ r.alteracao_codigo = sel.value; r.alteracao_em = now(); }
+    renderConditionalFields();
+  });
+
+  const note = document.createElement('input');
+  note.type='text'; note.placeholder='Nota (opcional)'; note.value = r.alteracao_nota||'';
+  note.style.cssText = 'font-size:11.5px; padding:5px 6px; width:100%; border:1px solid var(--line); border-radius:6px; margin-top:5px;';
+  note.addEventListener('blur', async ()=>{
+    if(note.value.trim() === (r.alteracao_nota||'')) return;
+    const ok = await updateRegistro(r.id, {alteracao_nota: note.value.trim()});
+    if(ok) r.alteracao_nota = note.value.trim();
+  });
+
+  const confirmBtn = document.createElement('button');
+  confirmBtn.className = 'btn-primary';
+  confirmBtn.textContent = 'Confirmar alteração';
+  confirmBtn.style.cssText = 'margin-top:6px; width:100%; font-size:11.5px; padding:6px 8px;';
+  confirmBtn.addEventListener('click', async ()=>{
+    if(!r.alteracao_codigo){ toast('Selecione um código antes de confirmar.'); return; }
+    const codigo = codigos.find(c => c.sigla === r.alteracao_codigo);
+    const desc = codigo ? normLoose(codigo.descricao) : '';
+    if(desc.includes('troca de horario') && !r.alteracao_novo_horario){ toast('Selecione o novo horário antes de confirmar.'); return; }
+    if(desc.includes('troca de dia') && !r.alteracao_novo_dia){ toast('Selecione o novo dia antes de confirmar.'); return; }
+    if(!confirm('ATENÇÃO: ao confirmar, você assina essa alteração. Deseja continuar?')) return;
+    const patch = {alteracao_confirmado_por: meuPerfil.nome, alteracao_confirmado_em: now()};
     const ok = await updateRegistro(r.id, patch);
     if(ok){ Object.assign(r, patch); render(); }
   });
-  const cancel = document.createElement('button'); cancel.className='btn-outline'; cancel.textContent='Cancelar';
-  cancel.addEventListener('click', ()=>render());
-  actions.appendChild(save); actions.appendChild(cancel);
-  form.appendChild(sel); form.appendChild(note); form.appendChild(actions);
+
+  form.appendChild(sel);
+  form.appendChild(fieldsWrap);
+  form.appendChild(note);
+  form.appendChild(confirmBtn);
   altTd.appendChild(form);
 }
 function renderConfirmCell(confTd, r){
@@ -1135,7 +1191,7 @@ function renderArchiveCell(archTd, r){
 }
 function updateCounters(scope){
   document.getElementById('pendingCount').textContent = scope.filter(r=>!r.confirmado_por).length;
-  document.getElementById('unconfirmedCount').textContent = scope.filter(r=>!!r.rejeicao_motivo).length;
+  document.getElementById('unconfirmedCount').textContent = scope.filter(r=>!!r.rejeicao_motivo && !r.alteracao_confirmado_por).length;
 }
 document.getElementById('tbody').addEventListener('click', async (e)=>{
   const btn = e.target.closest('[data-del]'); if(!btn) return;
@@ -1254,8 +1310,8 @@ document.getElementById('btnResumoCopiar').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnExport').addEventListener('click', ()=>{
-  const header = ['Líder','Mat','Colaborador','Data','Dia','E1','S1','E2','S2','Observação','Justificativa','Novo Horário','Novo Dia','Observação p/ Conferência','Atualizado (Justificativa)','Alteração','Nota Alteração','Atualizado (Alteração)','Confirmado Por','Confirmado Em'];
-  const rows = registros.map(r=>[r.encarregado,r.matricula,r.nome,r.data,r.dia,r.e1,r.s1,r.e2,r.s2,r.observacao,r.justificativa,r.novo_horario,r.novo_dia,r.conferencia_obs,fmt(r.just_atualizado_em),r.alteracao_codigo,r.alteracao_nota,fmt(r.alteracao_em),r.confirmado_por,fmt(r.confirmado_em)]);
+  const header = ['Líder','Mat','Colaborador','Data','Dia','E1','S1','E2','S2','Observação','Justificativa','Novo Horário','Novo Dia','Observação p/ Conferência','Atualizado (Justificativa)','Confirmado Por','Confirmado Em','Motivo Recusa','Recusado Por','Recusado Em','Alteração (código)','Nota Alteração','Novo Horário (Alteração)','Novo Dia (Alteração)','Alteração Confirmada Por','Alteração Confirmada Em'];
+  const rows = registros.map(r=>[r.encarregado,r.matricula,r.nome,r.data,r.dia,r.e1,r.s1,r.e2,r.s2,r.observacao,r.justificativa,r.novo_horario,r.novo_dia,r.conferencia_obs,fmt(r.just_atualizado_em),r.confirmado_por,fmt(r.confirmado_em),r.rejeicao_motivo,r.rejeitado_por,fmt(r.rejeitado_em),r.alteracao_codigo,r.alteracao_nota,r.alteracao_novo_horario,r.alteracao_novo_dia,r.alteracao_confirmado_por,fmt(r.alteracao_confirmado_em)]);
   const csv = [header, ...rows].map(row => row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(';')).join('\n');
   const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
