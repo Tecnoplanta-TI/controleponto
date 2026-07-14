@@ -708,9 +708,17 @@ function populateDiaFilter(){
 function populateEncarregadoFilter(){
   const sel = document.getElementById('filterEncarregado');
   const current = sel.value;
-  const names = [...new Set(registros.map(r=>r.encarregado).filter(Boolean))].sort();
+  const isStaff = meuPerfil.papel === 'admin' || meuPerfil.papel === 'rh';
+  const fUnidade = document.getElementById('filterUnidade').value;
+  const pool = registros.filter(r=>{
+    if(isStaff && fUnidade && fUnidade !== '__todas__' && r.unidade !== fUnidade) return false;
+    if(meuPerfil.papel === 'encarregado' && r.unidade !== meuPerfil.unidade) return false;
+    return true;
+  });
+  const names = [...new Set(pool.map(r=>r.encarregado).filter(Boolean))].sort();
   sel.innerHTML = '<option value="">Todos os líderes</option>' + names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
   if(names.includes(current)) sel.value = current;
+  else sel.value = '';
 }
 
 let archiveView = false;
