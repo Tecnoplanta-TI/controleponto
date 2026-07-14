@@ -972,7 +972,8 @@ function renderTrocaFields(justTd, r){
   wrap.style.cssText = 'margin-top:5px;';
   const input = document.createElement('input');
   input.style.cssText = 'font-size:11.5px; padding:5px 6px; width:100%; border:1px solid var(--line); border-radius:6px;';
-  if(meuPerfil.papel === 'visualizador') input.disabled = true;
+  if(meuPerfil.papel === 'visualizador' || r.confirmado_por) input.disabled = true;
+  if(r.confirmado_por) input.title = 'Já assinado — só é possível corrigir via recusa + Alteração';
 
   if(ehTrocaHorario){
     input.type = 'time';
