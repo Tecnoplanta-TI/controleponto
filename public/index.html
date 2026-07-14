@@ -241,24 +241,29 @@
     thead{display:none;}
     tbody{display:block;}
     tr{
-      display:block; width:100%; box-sizing:border-box;
+      display:flex; flex-wrap:wrap; width:100%; box-sizing:border-box;
       background:var(--card); border:1px solid var(--line); border-radius:14px;
       margin-bottom:12px; padding:6px 14px; box-shadow:var(--shadow);
     }
     td{
-      display:block; width:100%; box-sizing:border-box;
+      flex:1 1 100%; display:block; width:100%; box-sizing:border-box;
       border:none; border-bottom:1px solid var(--line);
       padding:9px 0;
     }
+    /* E1/S1/E2/S2 lado a lado, 2 colunas x 2 linhas */
+    td.mcell-half{flex:1 1 47%; max-width:47%;}
+    td.mcell-half:nth-of-type(odd){margin-right:6%;}
     td:last-child{border-bottom:none;}
     td[data-label]:not([data-label=""])::before{
       content:attr(data-label);
       display:block; font-size:10px; font-weight:700; text-transform:uppercase;
       letter-spacing:.05em; color:var(--ink-soft); margin-bottom:4px;
     }
-    td:empty{padding:0; border:none;}
+    /* Célula sem valor: some inteira, sem deixar rótulo ou linha vazia */
+    td:empty{display:none;}
     .just-select{width:100%; min-width:0;}
     .obs{max-width:none;}
+    .enc-cell > div:first-child{font-weight:800; font-size:15.5px; color:var(--ink);}
   }
 </style>
 </head>
@@ -819,20 +824,20 @@ function render(){
       const ehConferencia = codigoAtual && normLoose(codigoAtual.descricao).includes('conferencia');
       tr.className = r.alteracao_codigo ? 'altered' : (ehConferencia ? 'conferencia' : (r.confirmado_por ? 'resolved' : (r.justificativa ? 'awaiting' : (r.rejeicao_motivo ? 'rejected' : ''))));
       tr.innerHTML = `
-        <td class="enc-cell" data-label="Líder"></td>
-        <td class="mono" data-label="Mat">${escapeHtml(r.matricula)}</td>
-        <td data-label="Colaborador">${escapeHtml(r.nome)}</td>
-        <td class="mono" data-label="Data">${escapeHtml(r.data)}</td>
-        <td data-label="Dia">${escapeHtml(r.dia)}</td>
-        <td class="mono" data-label="E1">${escapeHtml(r.e1)}</td>
-        <td class="mono" data-label="S1">${escapeHtml(r.s1)}</td>
-        <td class="mono" data-label="E2">${escapeHtml(r.e2)}</td>
-        <td class="mono" data-label="S2">${escapeHtml(r.s2)}</td>
-        <td class="obs" data-label="Observação">${escapeHtml(r.observacao)}</td>
-        <td class="just-cell" data-label="Justificativa"></td>
-        <td class="alt-cell" data-label="Alteração"></td>
-        <td class="confirm-cell" data-label="Confirmação"></td>
-        <td class="no-print arch-cell" data-label="Ponto ajustado"></td>
+        <td class="enc-cell" data-label="👤 Líder"></td>
+        <td class="mono" data-label="🔖 Mat">${escapeHtml(r.matricula)}</td>
+        <td data-label="🧑 Colaborador">${escapeHtml(r.nome)}</td>
+        <td class="mono" data-label="📅 Data">${escapeHtml(r.data)}</td>
+        <td data-label="🗓️ Dia">${escapeHtml(r.dia)}</td>
+        <td class="mono mcell-half" data-label="🕐 E1">${escapeHtml(r.e1)}</td>
+        <td class="mono mcell-half" data-label="🍽️ S1">${escapeHtml(r.s1)}</td>
+        <td class="mono mcell-half" data-label="🍽️ E2">${escapeHtml(r.e2)}</td>
+        <td class="mono mcell-half" data-label="🕐 S2">${escapeHtml(r.s2)}</td>
+        <td class="obs" data-label="📝 Observação">${escapeHtml(r.observacao)}</td>
+        <td class="just-cell" data-label="🏷️ Justificativa"></td>
+        <td class="alt-cell" data-label="✏️ Alteração"></td>
+        <td class="confirm-cell" data-label="✅ Confirmação"></td>
+        <td class="no-print arch-cell" data-label="🗄️ Ponto ajustado"></td>
         <td class="no-print" data-label="">${meuPerfil.papel!=='encarregado' ? `<button class="del-btn" data-del="${r.id}" title="Remover linha">✕</button>` : ''}</td>
       `;
       renderEncCell(tr.querySelector('.enc-cell'), r);
