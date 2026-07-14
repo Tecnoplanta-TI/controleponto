@@ -1206,7 +1206,9 @@ async function renderAccounts(){
   wrap.querySelectorAll('[data-papel]').forEach(sel=>{
     sel.addEventListener('change', async ()=>{
       const email = sel.getAttribute('data-papel');
-      const {error} = await sb.from('perfis').update({papel: sel.value}).eq('email', email);
+      const patch = {papel: sel.value};
+      if(sel.value !== 'encarregado') patch.unidade = null; // RH/Admin não usam unidade
+      const {error} = await sb.from('perfis').update(patch).eq('email', email);
       if(error){ toast('Erro: '+error.message); return; }
       toast('Papel atualizado.');
       renderAccounts();
@@ -1344,6 +1346,7 @@ function applyPermissions(){
       unidadeSel.innerHTML = '<option value="__todas__">Todas as unidades</option>' +
         UNIDADES.map(u=>`<option value="${u}">${u}</option>`).join('');
       unidadeSel.dataset.loaded = '1';
+      unidadeSel.value = '__todas__';
     }
   } else {
     unidadeSel.style.display = 'none';
