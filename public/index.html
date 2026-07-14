@@ -244,15 +244,15 @@
       display:flex; flex-wrap:wrap; width:100%; box-sizing:border-box;
       background:var(--card); border:1px solid var(--line); border-radius:14px;
       margin-bottom:12px; padding:6px 14px; box-shadow:var(--shadow);
+      column-gap:6%; row-gap:0;
     }
     td{
       flex:1 1 100%; display:block; width:100%; box-sizing:border-box;
       border:none; border-bottom:1px solid var(--line);
       padding:9px 0;
     }
-    /* E1/S1/E2/S2 lado a lado, 2 colunas x 2 linhas */
+    /* Mat+Colaborador, Data+Dia, E1+S1, E2+S2 — pares lado a lado */
     td.mcell-half{flex:1 1 47%; max-width:47%;}
-    td.mcell-half:nth-of-type(odd){margin-right:6%;}
     td:last-child{border-bottom:none;}
     td[data-label]:not([data-label=""])::before{
       content:attr(data-label);
@@ -314,7 +314,7 @@
   </div>
 
   <div class="chips-row no-print" id="statusChips">
-    <button class="chip" data-status="pending">Pendentes</button>
+    <button class="chip active" data-status="pending">Pendentes</button>
     <button class="chip" data-status="filled">Justificadas</button>
     <button class="chip" data-status="altered">Alteradas</button>
     <button class="chip" data-status="unconfirmed">Não confirmadas</button>
@@ -826,10 +826,10 @@ function render(){
       tr.className = r.alteracao_codigo ? 'altered' : (ehConferencia ? 'conferencia' : (r.confirmado_por ? 'resolved' : (r.justificativa ? 'awaiting' : (r.rejeicao_motivo ? 'rejected' : ''))));
       tr.innerHTML = `
         <td class="enc-cell" data-label="👤 Líder"></td>
-        <td class="mono" data-label="🔖 Mat">${escapeHtml(r.matricula)}</td>
-        <td data-label="🧑 Colaborador">${escapeHtml(r.nome)}</td>
-        <td class="mono" data-label="📅 Data">${escapeHtml(r.data)}</td>
-        <td data-label="🗓️ Dia">${escapeHtml(r.dia)}</td>
+        <td class="mono mcell-half" data-label="🔖 Mat">${escapeHtml(r.matricula)}</td>
+        <td class="mcell-half" data-label="🧑 Colaborador">${escapeHtml(r.nome)}</td>
+        <td class="mono mcell-half" data-label="📅 Data">${escapeHtml(r.data)}</td>
+        <td class="mcell-half" data-label="🗓️ Dia">${escapeHtml(r.dia)}</td>
         <td class="mono mcell-half" data-label="🕐 E1">${escapeHtml(r.e1)}</td>
         <td class="mono mcell-half" data-label="🍽️ S1">${escapeHtml(r.s1)}</td>
         <td class="mono mcell-half" data-label="🍽️ E2">${escapeHtml(r.e2)}</td>
@@ -1075,7 +1075,7 @@ function renderConfirmCell(confTd, r){
         toast('Escreva a explicação pro RH antes de confirmar.');
         return;
       }
-      if(!confirm('Ao confirmar, você assina esse documento. Deseja continuar?')) return;
+      if(!confirm('ATENÇÃO: ao confirmar, você assina esse documento. Deseja continuar?')) return;
       const patch = {confirmado_por: meuPerfil.nome, confirmado_em: now()};
       const ok = await updateRegistro(r.id, patch);
       if(ok){ Object.assign(r, patch); render(); }
@@ -1128,7 +1128,7 @@ document.getElementById('tbody').addEventListener('click', async (e)=>{
 document.getElementById('filterUnidade').addEventListener('change', render);
 document.getElementById('filterDia').addEventListener('change', render);
 document.getElementById('filterEncarregado').addEventListener('change', render);
-let activeStatusFilter = null;
+let activeStatusFilter = 'pending';
 document.querySelectorAll('#statusChips .chip').forEach(chip=>{
   chip.addEventListener('click', ()=>{
     const st = chip.getAttribute('data-status');
