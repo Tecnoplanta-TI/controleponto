@@ -738,6 +738,7 @@ function populateDiaFilter(){
   }
 }
 
+let encFilterInitializedFor = null;
 function populateEncarregadoFilter(){
   const sel = document.getElementById('filterEncarregado');
   const current = sel.value;
@@ -750,6 +751,14 @@ function populateEncarregadoFilter(){
   });
   const names = [...new Set(pool.map(r=>r.encarregado).filter(Boolean))].sort();
   sel.innerHTML = '<option value="">Todos os líderes</option>' + names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+
+  if(encFilterInitializedFor !== meuPerfil.email){
+    encFilterInitializedFor = meuPerfil.email;
+    if(meuPerfil.papel === 'encarregado' && names.includes(meuPerfil.nome)){
+      sel.value = meuPerfil.nome;
+      return;
+    }
+  }
   if(names.includes(current)) sel.value = current;
   else sel.value = '';
 }
