@@ -938,11 +938,16 @@ function renderTrocaFields(justTd, r){
     textarea.placeholder = 'Descreva a situação...';
     textarea.style.cssText = 'font-size:11.5px; padding:5px 6px; width:100%; min-width:170px; border:1px solid var(--line); border-radius:6px; resize:vertical; font-family:inherit;';
     textarea.value = r.conferencia_obs || '';
-    textarea.addEventListener('blur', async ()=>{
-      if(textarea.value === (r.conferencia_obs||'')) return;
-      const ok = await updateRegistro(r.id, {conferencia_obs: textarea.value.trim()});
-      if(ok){ r.conferencia_obs = textarea.value.trim(); }
-    });
+    if(r.confirmado_por){
+      textarea.disabled = true;
+      textarea.title = 'Já assinado — o texto não pode mais ser alterado';
+    } else {
+      textarea.addEventListener('blur', async ()=>{
+        if(textarea.value === (r.conferencia_obs||'')) return;
+        const ok = await updateRegistro(r.id, {conferencia_obs: textarea.value.trim()});
+        if(ok){ r.conferencia_obs = textarea.value.trim(); }
+      });
+    }
     wrap.appendChild(label);
     wrap.appendChild(textarea);
     justTd.appendChild(wrap);
