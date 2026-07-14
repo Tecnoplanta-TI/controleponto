@@ -250,10 +250,15 @@
     <div class="clocks">
       <div class="clock"><div class="n" id="pendingCount">0</div><div class="l">pendentes</div></div>
       <div class="clock"><div class="n alt" id="unconfirmedCount">0</div><div class="l">a confirmar</div></div>
-      <div class="user-badge" id="userBadge" style="display:none;">
-        <span><span class="role-tag" id="roleTag">RH</span> <span id="userName"></span></span>
-        <button id="btnMinhaSenha">senha</button>
-        <button id="btnLogout">sair</button>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+        <div class="user-badge" id="userBadge" style="display:none;">
+          <span><span class="role-tag" id="roleTag">RH</span> <span id="userName"></span></span>
+          <button id="btnMinhaSenha">senha</button>
+          <button id="btnLogout">sair</button>
+        </div>
+        <select id="impersonateSelect" style="display:none; font-size:11.5px; padding:4px 6px; border-radius:6px; max-width:220px;">
+          <option value="">Ver como (você mesmo)</option>
+        </select>
       </div>
     </div>
   </header>
@@ -512,7 +517,8 @@ const DEFAULT_CODES = [
 
 let registros = [];
 let codigos = [];
-let meuPerfil = null; // {email, nome, papel}
+let meuPerfil = null; // {email, nome, papel} — pode ser sobrescrito por "Ver como" (impersonação)
+let realAdminPerfil = null; // identidade real, só preenchida se o login de fato for admin
 
 function toast(msg){
   const t = document.getElementById('toast');
@@ -722,6 +728,7 @@ function render(){
     if(fDia && fDia !== '__todos__' && r.data !== fDia) return false;
     if(fEnc && r.encarregado !== fEnc) return false;
     if(isStaff && fUnidade && fUnidade !== '__todas__' && r.unidade !== fUnidade) return false;
+    if(meuPerfil.papel === 'encarregado' && r.unidade !== meuPerfil.unidade) return false;
     return true;
   });
   const countersScope = scopeList.filter(r=>!r.arquivado);
@@ -1425,7 +1432,46 @@ function applyPermissions(){
   }
 
   document.getElementById('filterEncarregado').disabled = false;
+
+  const impSel = document.getElementById('impersonateSelect');
+  if(realAdminPerfil){
+    impSel.style.display = 'block';
+    populateImpersonateSelect();
+  } else {
+    impSel.style.display = 'none';
+  }
 }
+
+async function populateImpersonateSelect(){
+  const sel = document.getElementById('impersonateSelect');
+  const current = sel.value;
+  const {data, error} = await sb.from('perfis').select('*').neq('papel','pendente').order('nome');
+  if(error) return;
+  const papelLabels = {admin:'Admin', rh:'RH', encarregado:'Líder'};
+  sel.innerHTML = '<option value="">Ver como (você mesmo)</option>' +
+    data.filter(p=>p.email !== realAdminPerfil.email).map(p=>
+      `<option value="${escapeHtml(p.email)}">${escapeHtml(p.nome)} (${papelLabels[p.papel]||p.papel})</option>`
+    ).join('');
+  sel.dataset.cache = JSON.stringify(data);
+  if([...sel.options].some(o=>o.value===current)) sel.value = current;
+}
+
+document.getElementById('impersonateSelect').addEventListener('change', async (e)=>{
+  const email = e.target.value;
+  if(!email){
+    meuPerfil = {...realAdminPerfil};
+  } else {
+    const cache = JSON.parse(document.getElementById('impersonateSelect').dataset.cache || '[]');
+    const alvo = cache.find(p=>p.email === email);
+    if(!alvo) return;
+    meuPerfil = {...alvo};
+  }
+  archiveView = false;
+  applyPermissions();
+  await loadRegistros();
+  render();
+  toast(email ? `Agora vendo como ${meuPerfil.nome}` : 'Voltou pra sua visão de Admin.');
+});
 document.getElementById('tabAtivos').addEventListener('click', ()=>{
   archiveView = false;
   document.getElementById('tabAtivos').classList.add('active');
@@ -1477,6 +1523,7 @@ async function handleSession(session){
   }
 
   meuPerfil = data;
+  realAdminPerfil = (data.papel === 'admin') ? {...data} : null;
   await enterApp();
 }
 
