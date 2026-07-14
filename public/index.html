@@ -1175,10 +1175,11 @@ async function renderAccounts(){
         <option value="rh" ${a.papel==='rh'?'selected':''}>RH</option>
         <option value="admin" ${a.papel==='admin'?'selected':''}>Admin</option>
       </select>
-      <select data-unidade="${escapeHtml(a.email)}" title="Unidade">
+      <select data-unidade="${escapeHtml(a.email)}" title="Unidade" style="${a.papel==='encarregado' ? '' : 'display:none;'}">
         <option value="">Sem unidade</option>
         ${UNIDADES.map(u=>`<option value="${u}" ${a.unidade===u?'selected':''}>${u}</option>`).join('')}
       </select>
+      ${a.papel!=='encarregado' ? '<span style="width:130px; font-size:11px; color:var(--ink-soft);">— sem unidade (vê tudo)</span>' : ''}
       <button data-rmacc="${escapeHtml(a.email)}" title="Remover acesso">✕</button>
     </div>
   `).join('');
@@ -1208,6 +1209,7 @@ async function renderAccounts(){
       const {error} = await sb.from('perfis').update({papel: sel.value}).eq('email', email);
       if(error){ toast('Erro: '+error.message); return; }
       toast('Papel atualizado.');
+      renderAccounts();
     });
   });
   wrap.querySelectorAll('[data-rmacc]').forEach(btn=>{
