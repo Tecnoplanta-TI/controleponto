@@ -788,7 +788,7 @@ function render(){
     if(activeStatusFilter === 'filled') return !!r.justificativa;
     if(activeStatusFilter === 'altered') return !!r.alteracao_codigo;
     if(activeStatusFilter === 'unconfirmed') return r.justificativa && !r.confirmado_por;
-    if(activeStatusFilter === 'rejected') return !r.justificativa && !!r.rejeicao_motivo;
+    if(activeStatusFilter === 'rejected') return !!r.rejeicao_motivo;
     if(activeStatusFilter === 'conferencia'){
       const codigo = codigos.find(c => c.sigla === r.justificativa);
       return !!(codigo && normLoose(codigo.descricao).includes('conferencia'));
@@ -823,7 +823,7 @@ function render(){
       const tr = document.createElement('tr');
       const codigoAtual = codigos.find(c => c.sigla === r.justificativa);
       const ehConferencia = codigoAtual && normLoose(codigoAtual.descricao).includes('conferencia');
-      tr.className = r.alteracao_codigo ? 'altered' : (ehConferencia ? 'conferencia' : (r.confirmado_por ? 'resolved' : (r.justificativa ? 'awaiting' : (r.rejeicao_motivo ? 'rejected' : ''))));
+      tr.className = r.alteracao_codigo ? 'altered' : (r.rejeicao_motivo ? 'rejected' : (ehConferencia ? 'conferencia' : (r.confirmado_por ? 'resolved' : (r.justificativa ? 'awaiting' : ''))));
       tr.innerHTML = `
         <td class="enc-cell" data-label="👤 Líder"></td>
         <td class="mono mcell-half" data-label="🔖 Mat">${escapeHtml(r.matricula)}</td>
@@ -846,6 +846,8 @@ function render(){
       const sel = document.createElement('select');
       sel.className = 'just-select ' + (r.justificativa ? 'filled' : 'pending');
       sel.innerHTML = codeOptionsHtml(r.justificativa);
+      sel.disabled = !!r.confirmado_por;
+      sel.title = r.confirmado_por ? 'Já confirmado/assinado — use o campo Alteração pra corrigir' : '';
       sel.addEventListener('change', async (e)=>{
         const val = e.target.value;
         const patch = {justificativa: val, just_atualizado_em: val ? now() : null, rejeicao_motivo: null, rejeitado_por: null, rejeitado_em: null};
@@ -862,21 +864,32 @@ function render(){
         recBtn.className = 'alt-btn';
         recBtn.style.marginTop = '4px';
         recBtn.textContent = 'Recusar';
-        recBtn.title = 'Devolver pro líder como pendente, com motivo';
+        recBtn.title = r.confirmado_por
+          ? 'Sinalizar problema — a correção terá que ser feita pelo campo Alteração'
+          : 'Devolver pro líder como pendente, com motivo';
         recBtn.addEventListener('click', async ()=>{
           const motivo = prompt('Motivo da recusa (o líder vai ver isso):');
           if(!motivo || !motivo.trim()) return;
-          const patch = {justificativa: null, just_atualizado_em: null, rejeicao_motivo: motivo.trim(), rejeitado_por: meuPerfil.nome, rejeitado_em: now()};
+          let patch;
+          if(r.confirmado_por){
+            // já confirmado: só sinaliza o problema, não reabre o dropdown.
+            // a correção precisa ser feita pelo campo Alteração.
+            patch = {rejeicao_motivo: motivo.trim(), rejeitado_por: meuPerfil.nome, rejeitado_em: now()};
+          } else {
+            patch = {justificativa: null, just_atualizado_em: null, rejeicao_motivo: motivo.trim(), rejeitado_por: meuPerfil.nome, rejeitado_em: now()};
+          }
           const ok = await updateRegistro(r.id, patch);
           if(ok){ Object.assign(r, patch); render(); }
         });
         justTd.appendChild(document.createElement('br'));
         justTd.appendChild(recBtn);
       }
-      if(!r.justificativa && r.rejeicao_motivo){
+      if(r.rejeicao_motivo && !r.alteracao_codigo){
         const note = document.createElement('div');
         note.style.cssText = 'color:var(--red); font-size:11px; margin-top:4px; max-width:170px; line-height:1.4;';
-        note.innerHTML = `⚠ Recusado por ${escapeHtml(r.rejeitado_por||'RH')}: ${escapeHtml(r.rejeicao_motivo)}`;
+        note.innerHTML = r.confirmado_por
+          ? `⚠ ${escapeHtml(r.rejeitado_por||'RH')} sinalizou um problema: ${escapeHtml(r.rejeicao_motivo)} — corrija pelo campo Alteração`
+          : `⚠ Recusado por ${escapeHtml(r.rejeitado_por||'RH')}: ${escapeHtml(r.rejeicao_motivo)}`;
         justTd.appendChild(note);
       }
 
@@ -1116,7 +1129,7 @@ function renderArchiveCell(archTd, r){
 }
 function updateCounters(scope){
   document.getElementById('pendingCount').textContent = scope.filter(r=>!r.confirmado_por).length;
-  document.getElementById('unconfirmedCount').textContent = scope.filter(r=>!r.justificativa && !!r.rejeicao_motivo).length;
+  document.getElementById('unconfirmedCount').textContent = scope.filter(r=>!!r.rejeicao_motivo).length;
 }
 document.getElementById('tbody').addEventListener('click', async (e)=>{
   const btn = e.target.closest('[data-del]'); if(!btn) return;
