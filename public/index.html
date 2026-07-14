@@ -297,6 +297,7 @@
   <div class="tabs-row no-print" id="archiveTabs" style="display:none;">
     <button class="tab-btn active" id="tabAtivos">Ativos</button>
     <button class="tab-btn" id="tabArquivados">🗄 Arquivados</button>
+    <span style="align-self:center; font-size:11px; color:var(--ink-soft); margin-left:6px;">arquivados com mais de 90 dias são excluídos automaticamente</span>
   </div>
 
   <div class="toolbar">
@@ -729,7 +730,7 @@ function populateDiaFilter(){
   sel.innerHTML = '<option value="__todos__">Todos os dias</option>' +
     dates.map(d=> `<option value="${escapeHtml(d)}">${d===today?'Hoje — ':''}${escapeHtml(d)}</option>`).join('');
   if(!diaFilterInitialized){
-    sel.value = today;
+    sel.value = '__todos__';
     diaFilterInitialized = true;
   } else if([...sel.options].some(o=>o.value===current)){
     sel.value = current;
