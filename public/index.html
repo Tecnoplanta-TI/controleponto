@@ -1230,7 +1230,32 @@ function renderConfirmCell(confTd, r){
 }
 function renderArchiveCell(archTd, r){
   archTd.innerHTML = '';
-  if(meuPerfil.papel === 'encarregado') return; // líder não vê essa coluna
+
+  if(meuPerfil.papel === 'encarregado'){
+    if(!r.arquivado) return; // fora da aba Arquivados não tem nada a mostrar aqui
+    const isOwn = normalize(r.encarregado) === normalize(meuPerfil.nome);
+    if(!isOwn) return;
+    if(r.solicitacao_ajuste_motivo){
+      const span = document.createElement('span');
+      span.textContent = '⏳ Aguardando RH liberar';
+      span.title = 'Motivo enviado: '+r.solicitacao_ajuste_motivo;
+      span.style.cssText = 'color:var(--amber-dark); font-weight:700; font-size:11px;';
+      archTd.appendChild(span);
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'alt-btn';
+      btn.textContent = 'Solicitar ajuste';
+      btn.title = 'Pedir pro RH liberar esse lançamento arquivado pra correção';
+      btn.addEventListener('click', async ()=>{
+        const motivo = prompt('Explique por que esse lançamento precisa de ajuste:');
+        if(!motivo || !motivo.trim()) return;
+        const ok = await updateRegistro(r.id, {solicitacao_ajuste_motivo: motivo.trim()});
+        if(ok){ r.solicitacao_ajuste_motivo = motivo.trim(); render(); }
+      });
+      archTd.appendChild(btn);
+    }
+    return;
+  }
 
   if(meuPerfil.papel === 'visualizador'){
     if(r.arquivado){
@@ -1239,6 +1264,11 @@ function renderArchiveCell(archTd, r){
       span.title = 'Arquivado por '+(r.arquivado_por||'')+' em '+fmt(r.arquivado_em);
       span.style.cssText = 'color:var(--green); font-weight:700; font-size:11.5px;';
       archTd.appendChild(span);
+      if(r.solicitacao_ajuste_motivo){
+        const note=document.createElement('div'); note.className='ts';
+        note.textContent = '⏳ '+r.solicitacao_ajuste_por+' solicitou ajuste: '+r.solicitacao_ajuste_motivo;
+        archTd.appendChild(note);
+      }
     }
     return;
   }
@@ -1255,6 +1285,29 @@ function renderArchiveCell(archTd, r){
       if(ok){ Object.assign(r, patch); render(); }
     });
     archTd.appendChild(btn);
+    if(r.solicitacao_ajuste_motivo){
+      const note = document.createElement('div');
+      note.style.cssText = 'color:var(--amber-dark); font-size:11px; margin-top:4px; max-width:170px; line-height:1.4;';
+      note.textContent = '⏳ '+r.solicitacao_ajuste_por+' pediu ajuste: '+r.solicitacao_ajuste_motivo;
+      archTd.appendChild(note);
+      const liberarBtn = document.createElement('button');
+      liberarBtn.className = 'btn-primary';
+      liberarBtn.textContent = 'Liberar pra ajuste';
+      liberarBtn.style.cssText = 'margin-top:5px; width:100%; font-size:11px; padding:5px 6px;';
+      liberarBtn.addEventListener('click', async ()=>{
+        if(!confirm('Liberar esse lançamento pra ajuste? Ele volta ativo pro líder, marcado como recusado, pra corrigir pela coluna Alteração.')) return;
+        const patch = {
+          arquivado: false,
+          rejeicao_motivo: r.solicitacao_ajuste_motivo,
+          rejeitado_por: meuPerfil.nome,
+          rejeitado_em: now(),
+          solicitacao_ajuste_motivo: null, solicitacao_ajuste_por: null, solicitacao_ajuste_em: null
+        };
+        const ok = await updateRegistro(r.id, patch);
+        if(ok){ Object.assign(r, patch); render(); }
+      });
+      archTd.appendChild(liberarBtn);
+    }
   } else {
     const btn = document.createElement('button');
     btn.className = 'confirm-btn';
@@ -1625,7 +1678,7 @@ function applyPermissions(){
   document.getElementById('btnImport').style.display = isEditor ? 'inline-block' : 'none';
   document.getElementById('btnCodes').style.display = isEditor ? 'inline-block' : 'none';
   document.getElementById('btnAccounts').style.display = meuPerfil.papel === 'admin' ? 'inline-block' : 'none';
-  document.getElementById('archiveTabs').style.display = isViewerScope ? 'flex' : 'none';
+  document.getElementById('archiveTabs').style.display = (isViewerScope || meuPerfil.papel === 'encarregado') ? 'flex' : 'none';
   document.getElementById('btnResumo').style.display = isViewerScope ? 'inline-block' : 'none';
 
   const unidadeSel = document.getElementById('filterUnidade');
