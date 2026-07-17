@@ -1026,7 +1026,7 @@ function renderEncCell(encTd, r){
   }
 
   if(!podeEditar()){
-    const isOwn = normalize(r.encarregado) === normalize(meuPerfil.nome);
+    const isOwn = normLoose(r.encarregado) === normLoose(meuPerfil.nome);
     if(!isOwn) return; // encarregado só encaminha os próprios funcionários; visualizador nunca encaminha
   }
 
@@ -1230,7 +1230,7 @@ function renderArchiveCell(archTd, r){
 
   if(meuPerfil.papel === 'encarregado'){
     if(!r.arquivado) return; // fora da aba Arquivados não tem nada a mostrar aqui
-    const isOwn = normalize(r.encarregado) === normalize(meuPerfil.nome);
+    const isOwn = normLoose(r.encarregado) === normLoose(meuPerfil.nome);
     if(!isOwn) return;
     if(r.solicitacao_ajuste_motivo){
       const span = document.createElement('span');
