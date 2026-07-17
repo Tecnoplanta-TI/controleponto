@@ -83,7 +83,7 @@
   .chips-row{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px;}
   .chip{background:#fff; border:1px solid var(--line); color:var(--ink-soft); padding:7px 14px; border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer;}
   .chip.active{background:var(--brand); color:#fff; border-color:var(--brand);}
-  table{border-collapse:collapse; width:100%; min-width:1560px;}
+  table{border-collapse:collapse; width:100%; min-width:1700px;}
   thead th{position:sticky; top:0; background:var(--brand); color:#fff; text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; padding:10px 9px; z-index:2; white-space:nowrap;}
   tbody td{padding:7px 9px; border-bottom:1px solid var(--line); vertical-align:middle; font-size:12.5px;}
   tbody tr:nth-child(even){background:#FAFBFC;}
@@ -330,7 +330,7 @@
       <thead>
         <tr>
           <th>Líder</th><th>Mat</th><th>Colaborador</th><th>Data</th><th>Dia</th>
-          <th>E1</th><th>S1</th><th>E2</th><th>S2</th><th>Observação</th>
+          <th>E1</th><th>S1</th><th>E2</th><th>S2</th><th>E3</th><th>S3</th><th>Observação</th>
           <th>Justificativa</th><th>Alteração</th><th>Confirmação</th><th class="no-print">Ponto ajustado</th><th class="no-print"></th>
         </tr>
       </thead>
@@ -373,7 +373,7 @@
     </label>
     <button class="toggle-manual" id="toggleManual">Prefere colar os dados manualmente em vez de enviar o arquivo?</button>
     <div class="manual-area" id="manualArea">
-      <div class="cols">Encarregados | Mat | Nome Colaborador | Data | Dia | E1 | S1 | E2 | S2 | Observação | (Justificativa) | (Alteração) | (Assinatura Líder — ignorada)</div>
+      <div class="cols">Encarregados | Mat | Nome Colaborador | Data | Dia | E1 | S1 | E2 | S2 | E3 | S3 | Observação | (Justificativa) | (Alteração) | (Assinatura Líder — ignorada)</div>
       <textarea id="importText" placeholder="Cole aqui os dados copiados da Base de Dados..."></textarea>
       <div class="modal-actions"><button class="btn-primary" id="btnDoImport">Importar texto colado</button></div>
     </div>
@@ -609,15 +609,15 @@ function parsePasted(text, unidade){
     cells = cells.map(c=>c.trim());
     if(cells.length < 5) continue;
     if(normalize(cells[0]).includes('encarreg')) continue;
-    rows.push(buildRow(cells[0],cells[1],cells[2],cells[3],cells[4],cells[5],cells[6],cells[7],cells[8],cells[9],cells[10],unidade));
+    rows.push(buildRow(cells[0],cells[1],cells[2],cells[3],cells[4],cells[5],cells[6],cells[7],cells[8],cells[9],cells[10],cells[11],cells[12],unidade));
   }
   return rows;
 }
-function buildRow(encarregado,matricula,nome,data,dia,e1,s1,e2,s2,observacao,justificativa,unidade){
+function buildRow(encarregado,matricula,nome,data,dia,e1,s1,e2,s2,e3,s3,observacao,justificativa,unidade){
   justificativa = (justificativa||'').trim();
   return {
     encarregado: encarregado||'', matricula: matricula||'', nome: nome||'',
-    data: data||'', dia: dia||'', e1: e1||'', s1: s1||'', e2: e2||'', s2: s2||'',
+    data: data||'', dia: dia||'', e1: e1||'', s1: s1||'', e2: e2||'', s2: s2||'', e3: e3||'', s3: s3||'',
     observacao: observacao||'', justificativa, unidade: unidade || null,
     just_atualizado_em: justificativa ? now() : null
   };
@@ -634,7 +634,7 @@ function mapMatrizRows(data, unidade){
     encarregado: idx(['encarreg']), matricula: idx(['mat']),
     nome: idx(['colaborador','nome funcion','funcionário','funcionario']),
     data: idx(['data']), dia: idx(['dia']),
-    e1: idx(['e1']), s1: idx(['s1']), e2: idx(['e2']), s2: idx(['s2']),
+    e1: idx(['e1']), s1: idx(['s1']), e2: idx(['e2']), s2: idx(['s2']), e3: idx(['e3']), s3: idx(['s3']),
     observacao: idx(['observ']), justificativa: idx(['justific']),
   };
   const rows = [];
@@ -643,7 +643,7 @@ function mapMatrizRows(data, unidade){
     if(!row) continue;
     const get = (k)=> (col[k]>=0 && row[col[k]]!=null) ? String(row[col[k]]).trim() : '';
     if(!get('encarregado') && !get('nome')) continue;
-    rows.push(buildRow(get('encarregado'),get('matricula'),get('nome'),get('data'),get('dia'),get('e1'),get('s1'),get('e2'),get('s2'),get('observacao'),get('justificativa'),unidade));
+    rows.push(buildRow(get('encarregado'),get('matricula'),get('nome'),get('data'),get('dia'),get('e1'),get('s1'),get('e2'),get('s2'),get('e3'),get('s3'),get('observacao'),get('justificativa'),unidade));
   }
   return rows;
 }
@@ -860,6 +860,8 @@ function render(){
         <td class="mono mcell-half" data-label="🍽️ S1">${escapeHtml(r.s1)}</td>
         <td class="mono mcell-half" data-label="🍽️ E2">${escapeHtml(r.e2)}</td>
         <td class="mono mcell-half" data-label="🕐 S2">${escapeHtml(r.s2)}</td>
+        <td class="mono mcell-half" data-label="⏸️ E3">${escapeHtml(r.e3)}</td>
+        <td class="mono mcell-half" data-label="⏸️ S3">${escapeHtml(r.s3)}</td>
         <td class="obs" data-label="📝 Observação">${escapeHtml(r.observacao)}</td>
         <td class="just-cell" data-label="🏷️ Justificativa"></td>
         <td class="alt-cell" data-label="✏️ Alteração"></td>
@@ -1442,8 +1444,8 @@ document.getElementById('btnResumoCopiar').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnExport').addEventListener('click', ()=>{
-  const header = ['Líder','Mat','Colaborador','Data','Dia','E1','S1','E2','S2','Observação','Justificativa','Novo Horário','Novo Dia','Observação p/ Conferência','Atualizado (Justificativa)','Confirmado Por','Confirmado Em','Motivo Recusa','Recusado Por','Recusado Em','Alteração (código)','Nota Alteração','Novo Horário (Alteração)','Novo Dia (Alteração)','Alteração Confirmada Por','Alteração Confirmada Em'];
-  const rows = registros.map(r=>[r.encarregado,r.matricula,r.nome,r.data,r.dia,r.e1,r.s1,r.e2,r.s2,r.observacao,r.justificativa,r.novo_horario,r.novo_dia,r.conferencia_obs,fmt(r.just_atualizado_em),r.confirmado_por,fmt(r.confirmado_em),r.rejeicao_motivo,r.rejeitado_por,fmt(r.rejeitado_em),r.alteracao_codigo,r.alteracao_nota,r.alteracao_novo_horario,r.alteracao_novo_dia,r.alteracao_confirmado_por,fmt(r.alteracao_confirmado_em)]);
+  const header = ['Líder','Mat','Colaborador','Data','Dia','E1','S1','E2','S2','E3','S3','Observação','Justificativa','Novo Horário','Novo Dia','Observação p/ Conferência','Atualizado (Justificativa)','Confirmado Por','Confirmado Em','Motivo Recusa','Recusado Por','Recusado Em','Alteração (código)','Nota Alteração','Novo Horário (Alteração)','Novo Dia (Alteração)','Alteração Confirmada Por','Alteração Confirmada Em'];
+  const rows = registros.map(r=>[r.encarregado,r.matricula,r.nome,r.data,r.dia,r.e1,r.s1,r.e2,r.s2,r.e3,r.s3,r.observacao,r.justificativa,r.novo_horario,r.novo_dia,r.conferencia_obs,fmt(r.just_atualizado_em),r.confirmado_por,fmt(r.confirmado_em),r.rejeicao_motivo,r.rejeitado_por,fmt(r.rejeitado_em),r.alteracao_codigo,r.alteracao_nota,r.alteracao_novo_horario,r.alteracao_novo_dia,r.alteracao_confirmado_por,fmt(r.alteracao_confirmado_em)]);
   const csv = [header, ...rows].map(row => row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(';')).join('\n');
   const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
