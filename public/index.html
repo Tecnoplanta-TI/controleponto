@@ -1246,8 +1246,9 @@ function renderArchiveCell(archTd, r){
       btn.addEventListener('click', async ()=>{
         const motivo = prompt('Explique por que esse lançamento precisa de ajuste:');
         if(!motivo || !motivo.trim()) return;
-        const ok = await updateRegistro(r.id, {solicitacao_ajuste_motivo: motivo.trim()});
-        if(ok){ r.solicitacao_ajuste_motivo = motivo.trim(); render(); }
+        const patch = {solicitacao_ajuste_motivo: motivo.trim(), solicitacao_ajuste_por: meuPerfil.nome, solicitacao_ajuste_em: now()};
+        const ok = await updateRegistro(r.id, patch);
+        if(ok){ Object.assign(r, patch); render(); }
       });
       archTd.appendChild(btn);
     }
