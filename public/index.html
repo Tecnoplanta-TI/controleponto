@@ -589,8 +589,9 @@ function codeOptionsHtml(selected){
 }
 
 async function updateRegistro(id, patch){
-  const {error} = await sb.from('registros').update(patch).eq('id', id);
+  const {data, error} = await sb.from('registros').update(patch).eq('id', id).select();
   if(error){ toast('Erro ao salvar: '+error.message); return false; }
+  if(!data || data.length === 0){ toast('Não foi possível salvar — você pode não ter permissão pra essa ação, ou uma atualização do banco ainda não foi aplicada.'); return false; }
   return true;
 }
 async function deleteRegistro(id){
@@ -1192,15 +1193,11 @@ function renderConfirmCell(confTd, r){
 
   const btn = document.createElement('button');
   if(r.confirmado_por){
-    btn.className = 'confirm-btn done';
-    btn.innerHTML = '✓ '+escapeHtml(r.confirmado_por);
-    btn.title = 'Confirmado em '+fmt(r.confirmado_em)+' — clique para desfazer';
-    btn.addEventListener('click', async ()=>{
-      if(!confirm('Desfazer a confirmação deste registro?')) return;
-      const ok = await updateRegistro(r.id, {confirmado_por:null, confirmado_em:null});
-      if(ok){ r.confirmado_por=''; r.confirmado_em=''; render(); }
-    });
-    confTd.appendChild(btn);
+    const span = document.createElement('span');
+    span.textContent = '✓ '+r.confirmado_por;
+    span.title = 'Confirmado em '+fmt(r.confirmado_em)+' — assinatura definitiva, não pode ser desfeita';
+    span.style.cssText = 'color:var(--green); font-weight:700; font-size:11.5px;';
+    confTd.appendChild(span);
     const ts=document.createElement('span'); ts.className='ts'; ts.textContent=fmt(r.confirmado_em);
     confTd.appendChild(ts);
   } else {
