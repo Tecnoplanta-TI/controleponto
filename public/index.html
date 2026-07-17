@@ -199,6 +199,7 @@
   .resumo-img-btn{background:#fff; border:1px solid var(--line); border-radius:7px; padding:5px 8px; font-size:14px; cursor:pointer; line-height:1;}
   .resumo-img-btn:hover{border-color:var(--brand); background:#EAF7EE;}
   .resumo-item{display:flex; justify-content:space-between; padding:7px 0; border-top:1px solid var(--line); font-size:13.5px;}
+  .resumo-tag-recusa{display:inline-block; background:var(--amber-bg); color:var(--amber-dark); border:1px solid var(--amber); font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; margin-left:6px; vertical-align:middle;}
   .resumo-item:first-of-type{border-top:none;}
   .resumo-item .rn{font-weight:600;}
   .resumo-item .rd{color:var(--ink-soft); font-family:'Roboto Mono',monospace; font-size:12px;}
@@ -1395,7 +1396,7 @@ function openResumo(){
             <button class="resumo-img-btn no-shot" data-card="${idx}" title="Copiar este cartão como imagem">📷</button>
           </span>
         </div>
-        ${items.map(r=>`<div class="resumo-item"><span class="rn">${escapeHtml(r.nome)}</span><span class="rd">${escapeHtml(r.matricula)} · ${escapeHtml(r.data)}</span></div>`).join('')}
+        ${items.map(r=>`<div class="resumo-item"><span class="rn">${escapeHtml(r.nome)}${r.rejeicao_motivo ? ' <span class="resumo-tag-recusa">Retorno p/ ajuste</span>' : ''}</span><span class="rd">${escapeHtml(r.matricula)} · ${escapeHtml(r.data)}</span></div>`).join('')}
       </div>
     `).join('');
   }
@@ -1436,7 +1437,7 @@ document.getElementById('btnResumoCopiar').addEventListener('click', async ()=>{
   } else {
     for(const [enc, items] of grupos){
       txt += `\n👤 *${enc}* (${items.length})\n`;
-      for(const r of items){ txt += `• ${r.nome} — ${r.matricula} — ${r.data}\n`; }
+      for(const r of items){ txt += `• ${r.nome} — ${r.matricula} — ${r.data}${r.rejeicao_motivo ? ' ⚠️ Retorno p/ ajuste' : ''}\n`; }
     }
   }
   try{
