@@ -83,7 +83,7 @@
   .chips-row{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px;}
   .chip{background:#fff; border:1px solid var(--line); color:var(--ink-soft); padding:7px 14px; border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer;}
   .chip.active{background:var(--brand); color:#fff; border-color:var(--brand);}
-  table{border-collapse:collapse; width:100%; min-width:1700px;}
+  table{border-collapse:collapse; width:100%; min-width:1800px;}
   thead th{position:sticky; top:0; background:var(--brand); color:#fff; text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; padding:10px 9px; z-index:2; white-space:nowrap;}
   tbody td{padding:7px 9px; border-bottom:1px solid var(--line); vertical-align:middle; font-size:12.5px;}
   tbody tr:nth-child(even){background:#FAFBFC;}
@@ -330,7 +330,7 @@
       <thead>
         <tr>
           <th>Líder</th><th>Mat</th><th>Colaborador</th><th>Data</th><th>Dia</th>
-          <th>E1</th><th>S1</th><th>E2</th><th>S2</th><th>E3</th><th>S3</th><th>Observação</th>
+          <th>E1</th><th>S1</th><th>E2</th><th>S2</th><th>E3</th><th>S3</th><th>🚪 Saída Final</th><th>Observação</th>
           <th>Justificativa</th><th>Alteração</th><th>Confirmação</th><th class="no-print">Ponto ajustado</th><th class="no-print"></th>
         </tr>
       </thead>
@@ -710,6 +710,9 @@ function dmyToIso(d){
   if(!dd||!mm||!yyyy) return '';
   return `${yyyy.padStart(4,'0')}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
 }
+function saidaFinal(r){
+  return r.s3 || r.s2 || r.s1 || '';
+}
 function isoToDmy(iso){
   if(!iso) return '';
   const parts = iso.split('-');
@@ -862,6 +865,7 @@ function render(){
         <td class="mono mcell-half" data-label="🕐 S2">${escapeHtml(r.s2)}</td>
         <td class="mono mcell-half" data-label="⏸️ E3">${escapeHtml(r.e3)}</td>
         <td class="mono mcell-half" data-label="⏸️ S3">${escapeHtml(r.s3)}</td>
+        <td class="mono" data-label="🚪 Saída Final" style="font-weight:800; color:var(--brand);">${escapeHtml(saidaFinal(r))}</td>
         <td class="obs" data-label="📝 Observação">${escapeHtml(r.observacao)}</td>
         <td class="just-cell" data-label="🏷️ Justificativa"></td>
         <td class="alt-cell" data-label="✏️ Alteração"></td>
@@ -1444,8 +1448,8 @@ document.getElementById('btnResumoCopiar').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnExport').addEventListener('click', ()=>{
-  const header = ['Líder','Mat','Colaborador','Data','Dia','E1','S1','E2','S2','E3','S3','Observação','Justificativa','Novo Horário','Novo Dia','Observação p/ Conferência','Atualizado (Justificativa)','Confirmado Por','Confirmado Em','Motivo Recusa','Recusado Por','Recusado Em','Alteração (código)','Nota Alteração','Novo Horário (Alteração)','Novo Dia (Alteração)','Alteração Confirmada Por','Alteração Confirmada Em'];
-  const rows = registros.map(r=>[r.encarregado,r.matricula,r.nome,r.data,r.dia,r.e1,r.s1,r.e2,r.s2,r.e3,r.s3,r.observacao,r.justificativa,r.novo_horario,r.novo_dia,r.conferencia_obs,fmt(r.just_atualizado_em),r.confirmado_por,fmt(r.confirmado_em),r.rejeicao_motivo,r.rejeitado_por,fmt(r.rejeitado_em),r.alteracao_codigo,r.alteracao_nota,r.alteracao_novo_horario,r.alteracao_novo_dia,r.alteracao_confirmado_por,fmt(r.alteracao_confirmado_em)]);
+  const header = ['Líder','Mat','Colaborador','Data','Dia','E1','S1','E2','S2','E3','S3','Saída Final','Observação','Justificativa','Novo Horário','Novo Dia','Observação p/ Conferência','Atualizado (Justificativa)','Confirmado Por','Confirmado Em','Motivo Recusa','Recusado Por','Recusado Em','Alteração (código)','Nota Alteração','Novo Horário (Alteração)','Novo Dia (Alteração)','Alteração Confirmada Por','Alteração Confirmada Em'];
+  const rows = registros.map(r=>[r.encarregado,r.matricula,r.nome,r.data,r.dia,r.e1,r.s1,r.e2,r.s2,r.e3,r.s3,saidaFinal(r),r.observacao,r.justificativa,r.novo_horario,r.novo_dia,r.conferencia_obs,fmt(r.just_atualizado_em),r.confirmado_por,fmt(r.confirmado_em),r.rejeicao_motivo,r.rejeitado_por,fmt(r.rejeitado_em),r.alteracao_codigo,r.alteracao_nota,r.alteracao_novo_horario,r.alteracao_novo_dia,r.alteracao_confirmado_por,fmt(r.alteracao_confirmado_em)]);
   const csv = [header, ...rows].map(row => row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(';')).join('\n');
   const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
