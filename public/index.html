@@ -365,6 +365,8 @@
         <option value="UTB">UTB</option>
         <option value="UES">UES</option>
         <option value="UBA">UBA</option>
+        <option value="EMPÓRIO">EMPÓRIO</option>
+        <option value="ADM">ADM</option>
       </select>
     </div>
     <label class="dropzone" id="dropzone">
@@ -544,7 +546,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true }
 });
 
-const UNIDADES = ['UBR','UBN','UTB','UES','UBA'];
+const UNIDADES = ['UBR','UBN','UTB','UES','UBA','EMPÓRIO','ADM'];
 const DEFAULT_CODES = [
   {c:"FJ", l:"Falta Justificada"}, {c:"FI", l:"Falta Injustificada (Falta Total)"},
   {c:"AB", l:"Abono"}, {c:"AR", l:"Abono de Registro"}, {c:"AM", l:"Atestado Médico"},
