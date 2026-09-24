@@ -306,7 +306,7 @@
     <div class="grow"><select id="filterUnidade" style="display:none;"></select></div>
     <div class="grow"><select id="filterDia"></select></div>
     <div class="grow"><select id="filterEncarregado"><option value="">Todos os líderes</option></select></div>
-    <div class="grow"><input type="search" id="searchBox" placeholder="Buscar por nome ou matrícula..."></div>
+    <div class="grow"><input type="search" id="searchBox" name="busca_registro" autocomplete="off" placeholder="Buscar por nome ou matrícula..."></div>
     <button class="btn-outline" id="btnCodes" style="display:none;">Códigos ⚙</button>
     <button class="btn-outline" id="btnAccounts" style="display:none;">Acessos ⚙</button>
     <button class="btn-outline" id="btnResumo" style="display:none;">📋 Resumo p/ WhatsApp</button>
@@ -1758,6 +1758,7 @@ document.getElementById('tabArquivados').addEventListener('click', ()=>{
 async function enterApp(){
   hideAllGates();
   applyPermissions();
+  document.getElementById('searchBox').value = '';
   await loadCodigos();
   await loadRegistros();
   render();
