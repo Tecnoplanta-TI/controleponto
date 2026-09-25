@@ -306,7 +306,7 @@
     <div class="grow"><select id="filterUnidade" style="display:none;"></select></div>
     <div class="grow"><select id="filterDia"></select></div>
     <div class="grow"><select id="filterEncarregado"><option value="">Todos os líderes</option></select></div>
-    <div class="grow"><input type="search" id="searchBox" name="busca_registro" autocomplete="off" placeholder="Buscar por nome ou matrícula..."></div>
+    <div class="grow"><input type="text" id="searchBox" name="q_9f31" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');" placeholder="Buscar por nome ou matrícula..."></div>
     <button class="btn-outline" id="btnCodes" style="display:none;">Códigos ⚙</button>
     <button class="btn-outline" id="btnAccounts" style="display:none;">Acessos ⚙</button>
     <button class="btn-outline" id="btnResumo" style="display:none;">📋 Resumo p/ WhatsApp</button>
@@ -829,7 +829,11 @@ function render(){
   }
 
   let list = scopeList.filter(r=>{
-    if(archiveView) return !!r.arquivado;
+    if(archiveView){
+      if(!r.arquivado) return false;
+      if(q && !((r.nome||'').toLowerCase().includes(q) || (r.matricula||'').toLowerCase().includes(q))) return false;
+      return true;
+    }
     if(r.arquivado) return false;
     if(!matchesStatus(r)) return false;
     if(q && !((r.nome||'').toLowerCase().includes(q) || (r.matricula||'').toLowerCase().includes(q))) return false;
