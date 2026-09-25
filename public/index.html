@@ -306,7 +306,7 @@
     <div class="grow"><select id="filterUnidade" style="display:none;"></select></div>
     <div class="grow"><select id="filterDia"></select></div>
     <div class="grow"><select id="filterEncarregado"><option value="">Todos os líderes</option></select></div>
-    <div class="grow"><input type="text" id="searchBox" name="q_9f31" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');" placeholder="Buscar por nome ou matrícula..."></div>
+    <div class="grow"><input type="text" id="searchBox" name="q_9f31" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Buscar por nome ou matrícula..."></div>
     <button class="btn-outline" id="btnCodes" style="display:none;">Códigos ⚙</button>
     <button class="btn-outline" id="btnAccounts" style="display:none;">Acessos ⚙</button>
     <button class="btn-outline" id="btnResumo" style="display:none;">📋 Resumo p/ WhatsApp</button>
@@ -1357,7 +1357,9 @@ document.querySelectorAll('#statusChips .chip').forEach(chip=>{
     render();
   });
 });
-document.getElementById('searchBox').addEventListener('input', render);
+['input','keyup','change','paste'].forEach(evt=>{
+  document.getElementById('searchBox').addEventListener(evt, ()=>render());
+});
 
 function openModal(id){ document.getElementById(id).classList.add('show'); }
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }
